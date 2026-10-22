@@ -36,7 +36,7 @@ await shot(owner, 'assinatura');
 await owner.click('button:has-text("Testar 7 dias")');
 await owner.waitForURL('**/painel');
 await shot(owner, 'painel-inicio');
-ok(await owner.locator('h1:has-text("Início")').isVisible(), 'painel liberado após iniciar teste');
+ok(await owner.locator('.home-grid').isVisible(), 'painel liberado após iniciar teste');
 
 await owner.goto(BASE + '/painel/servicos');
 await owner.fill('form[action$="/painel/servicos"] input[name=name]', 'Corte degradê');
@@ -50,13 +50,23 @@ await owner.click('a:has-text("Zé da Navalha")');
 await shot(owner, 'profissional');
 await owner.locator('form[action$="/servicos"] button').click();
 
+// logo e capa enviados pela própria barbearia (imagens geradas no teste, sem foto de terceiros)
+await owner.goto(BASE + '/painel/configuracoes');
+await owner.setInputFiles('form[action$="/imagem"]:has(input[value=logo]) input[type=file]', '/tmp/logo.png');
+await owner.click('form[action$="/imagem"]:has(input[value=logo]) button:has-text("Enviar")');
+await owner.setInputFiles('form[action$="/imagem"]:has(input[value=cover]) input[type=file]', '/tmp/cover.png');
+await owner.click('form[action$="/imagem"]:has(input[value=cover]) button:has-text("Enviar")');
+ok(await owner.locator('.img-prev.cover img').isVisible(), 'capa enviada aparece nas configurações');
+await shot(owner, 'configuracoes-imagens');
+
 // cliente na página pública
 const cust = await newCtx('cliente');
 await cust.goto(`${BASE}/b/${slug}`); await shot(cust, 'publica-1');
+ok(await cust.locator('.shop-logo img').isVisible() && await cust.locator('.shop-cover').evaluate(e => getComputedStyle(e).backgroundImage.includes('uploads')), 'página pública mostra logo e capa');
 await cust.locator('.choice:has-text("Corte degradê")').click();
 await cust.click('#to2');
 const d = new Date(Date.now() + 3 * 864e5); while ([0].includes(d.getDay())) d.setDate(d.getDate() + 1);
-await cust.fill('#date', d.toISOString().slice(0, 10)); await cust.dispatchEvent('#date', 'change');
+await cust.click(`.chip[data-date="${d.toISOString().slice(0, 10)}"]`);
 await cust.waitForSelector('#slots .slot');
 await shot(cust, 'publica-2');
 const nSlots = await cust.locator('#slots .slot').count(); ok(nSlots === 35, `horários exibidos sem duplicar (${nSlots})`);
@@ -77,7 +87,7 @@ ok(!!manage, 'link de gerenciamento exibido');
 await owner.goto(`${BASE}/painel/agenda?data=${d.toISOString().slice(0, 10)}`);
 ok(await owner.locator('text=Carlos Cliente').first().isVisible(), 'agendamento aparece na agenda do dono');
 await shot(owner, 'agenda');
-await owner.click('a.agenda-row:has-text("Carlos Cliente")');
+await owner.click('a.tl-appt:has-text("Carlos Cliente")');
 await owner.click('button:has-text("Concluir atendimento")');
 ok(await owner.locator('text=O pagamento ainda não foi lançado').isVisible(), 'concluir avisa que não lançou pagamento');
 await owner.selectOption('select[name=method]', 'pix');

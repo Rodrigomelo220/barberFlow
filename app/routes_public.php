@@ -159,7 +159,8 @@ function register_public_routes(Router $r): void
                 'whatsapp_consent' => !empty($in['whatsapp_consent']), 'source' => 'link']);
             $tz = $shop['timezone'];
             json_out(['ok' => true, 'manage_url' => abs_url('/agendamento/' . $b['manage_token']), 'manage_path' => url('/agendamento/' . $b['manage_token']),
-                'when' => weekday_pt($b['starts_at']->setTimezone(new DateTimeZone($tz))) . ', ' . dt_local(dt_db($b['starts_at']), $tz, 'd/m/Y \à\s H:i'), 'total' => money($b['total_price_cents'])]);
+                'when' => weekday_pt($b['starts_at']->setTimezone(new DateTimeZone($tz))) . ', ' . dt_local(dt_db($b['starts_at']), $tz, 'd/m/Y \à\s H:i'), 'total' => money($b['total_price_cents']),
+                'starts_ts' => $b['starts_at']->getTimestamp(), 'ends_ts' => $b['ends_at']->getTimestamp(), 'shop_name' => $shop['name'], 'address' => (string)$shop['address']]);
         } catch (BusinessError $e) {
             json_out(['error' => $e->errorCode, 'message' => $e->getMessage()], $e->status);
         }

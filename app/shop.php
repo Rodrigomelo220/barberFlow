@@ -291,6 +291,74 @@ final class Shops
         audit($shopId, $userId, 'shop.settings_updated', 'shop', $shopId);
     }
 
+    // ---------------------------------------------------------- logo e capa
+
+    private const IMG_TYPES = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+
+    /**
+     * Guarda logo ou capa. Valida o conteúdo de verdade (getimagesize), limita tamanho/dimensões, regrava a imagem com GD quando
+     * disponível (descarta metadados e qualquer carga embutida) e usa nome aleatório. $file é uma entrada de $_FILES.
+     * $trusted=true só nos testes (arquivo não veio de upload HTTP).
+     */
+    public static function saveImage(int $shopId, int $userId, string $kind, array $file, bool $trusted = false): string
+    {
+        if (!in_array($kind, ['logo', 'cover'], true)) throw new BusinessError('Tipo de imagem inválido.');
+        $err = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) throw new BusinessError('A imagem é grande demais (máximo 2 MB).', 'image_too_big');
+        if ($err !== UPLOAD_ERR_OK) throw new BusinessError('Escolha uma imagem para enviar.', 'no_file');
+        $tmp = (string)$file['tmp_name'];
+        if (!$trusted && !is_uploaded_file($tmp)) throw new BusinessError('Envio inválido.');
+        if (filesize($tmp) > 2 * 1024 * 1024) throw new BusinessError('A imagem é grande demais (máximo 2 MB).', 'image_too_big');
+        $info = @getimagesize($tmp);
+        if (!$info || !isset(self::IMG_TYPES[$info[2]])) throw new BusinessError('Use uma imagem JPG, PNG ou WebP.', 'bad_image');
+        if ($info[0] < 1 || $info[1] < 1 || $info[0] > 6000 || $info[1] > 6000) throw new BusinessError('Dimensões da imagem fora do limite (até 6000 px).', 'bad_image');
+        $ext = self::IMG_TYPES[$info[2]];
+        $dir = BF_ROOT . '/uploads';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true)) throw new BusinessError('Não foi possível gravar a imagem neste servidor (pasta uploads/).', 'storage');
+        $name = $shopId . '-' . $kind . '-' . bin2hex(random_bytes(6)) . '.' . $ext;
+        $dest = $dir . '/' . $name;
+        $done = false;
+        if (extension_loaded('gd')) {
+            $src = match ($info[2]) { IMAGETYPE_JPEG => @imagecreatefromjpeg($tmp), IMAGETYPE_PNG => @imagecreatefrompng($tmp), default => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($tmp) : false };
+            if ($src) {
+                $max = $kind === 'logo' ? 480 : 1600;
+                $w = imagesx($src); $h = imagesy($src);
+                $scale = min(1, $max / max($w, $h));
+                $nw = max(1, (int)round($w * $scale)); $nh = max(1, (int)round($h * $scale));
+                $dst = imagecreatetruecolor($nw, $nh);
+                if ($ext !== 'jpg') { imagealphablending($dst, false); imagesavealpha($dst, true); }
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                $done = match ($ext) { 'jpg' => imagejpeg($dst, $dest, 86), 'png' => imagepng($dst, $dest, 7), default => function_exists('imagewebp') ? imagewebp($dst, $dest, 84) : false };
+                imagedestroy($src); imagedestroy($dst);
+            }
+        }
+        if (!$done) {
+            if (!$trusted ? !move_uploaded_file($tmp, $dest) : !copy($tmp, $dest)) throw new BusinessError('Não foi possível gravar a imagem.', 'storage');
+        }
+        @chmod($dest, 0644);
+        $col = $kind . '_path';
+        $old = DB::val("SELECT $col FROM shops WHERE id = ?", [$shopId]);
+        DB::exec("UPDATE shops SET $col = ? WHERE id = ?", [$name, $shopId]);
+        if ($old) @unlink($dir . '/' . basename((string)$old));
+        audit($shopId, $userId, 'shop.image_updated', 'shop', $shopId, $kind);
+        return $name;
+    }
+
+    public static function removeImage(int $shopId, int $userId, string $kind): void
+    {
+        if (!in_array($kind, ['logo', 'cover'], true)) throw new BusinessError('Tipo de imagem inválido.');
+        $col = $kind . '_path';
+        $old = DB::val("SELECT $col FROM shops WHERE id = ?", [$shopId]);
+        DB::exec("UPDATE shops SET $col = NULL WHERE id = ?", [$shopId]);
+        if ($old) @unlink(BF_ROOT . '/uploads/' . basename((string)$old));
+        audit($shopId, $userId, 'shop.image_removed', 'shop', $shopId, $kind);
+    }
+
+    public static function imageUrl(?string $path): ?string
+    {
+        return $path && preg_match('/^[0-9]+-(logo|cover)-[0-9a-f]{12}\.(jpg|png|webp)$/', $path) ? url('/uploads/' . $path) : null;
+    }
+
     // ---------------------------------------------------------- agenda e painel
 
     public static function appointmentsBetween(int $shopId, DateTimeImmutable $from, DateTimeImmutable $to, ?int $proId = null): array
@@ -323,6 +391,25 @@ final class Shops
               (SELECT GROUP_CONCAT(s.name ORDER BY s.position SEPARATOR ' + ') FROM appointment_services s WHERE s.appointment_id = a.id) AS services
             FROM appointments a JOIN customers c ON c.id = a.customer_id JOIN professionals p ON p.id = a.professional_id
             WHERE a.shop_id = ? AND a.status = 'confirmed' AND a.starts_at >= ? ORDER BY a.starts_at LIMIT 5", [$shopId, dt_db($now)]);
-        return ['today' => array_map('intval', $today), 'received' => $recv, 'expected' => $exp, 'new_customers' => $newc, 'no_show_rate' => $rate, 'next' => $next];
+        // próximos 7 dias (agendamentos confirmados) e últimos 7 dias (recebido), por dia local
+        $wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+        $ahead = []; $back = [];
+        for ($i = 0; $i < 7; $i++) {
+            $a = $d0->modify("+$i day"); $ahead[$a->format('Y-m-d')] = ['date' => $a->format('Y-m-d'), 'label' => $i === 0 ? 'hoje' : $wd[(int)$a->format('w')], 'day' => $a->format('d'), 'count' => 0];
+            $b = $d0->modify('-' . (6 - $i) . ' day'); $back[$b->format('Y-m-d')] = ['date' => $b->format('Y-m-d'), 'label' => $i === 6 ? 'hoje' : $wd[(int)$b->format('w')], 'day' => $b->format('d'), 'cents' => 0];
+        }
+        foreach (DB::all("SELECT starts_at FROM appointments WHERE shop_id = ? AND status = 'confirmed' AND starts_at >= ? AND starts_at < ?", [$shopId, dt_db($d0), dt_db($d0->modify('+7 day'))]) as $r) {
+            $k = dt_from_db($r['starts_at'])->setTimezone($z)->format('Y-m-d'); if (isset($ahead[$k])) $ahead[$k]['count']++;
+        }
+        foreach (DB::all("SELECT received_at, amount_cents, kind FROM shop_payments WHERE shop_id = ? AND status = 'received' AND received_at >= ? AND received_at < ?", [$shopId, dt_db($d0->modify('-6 day')), dt_db($d1)]) as $r) {
+            $k = dt_from_db($r['received_at'])->setTimezone($z)->format('Y-m-d'); if (isset($back[$k])) $back[$k]['cents'] += $r['kind'] === 'refund' ? -(int)$r['amount_cents'] : (int)$r['amount_cents'];
+        }
+        $setup = [
+            'service' => (int)DB::val('SELECT COUNT(*) FROM services WHERE shop_id = ? AND active = 1', [$shopId]) > 0,
+            'professional' => (int)DB::val('SELECT COUNT(DISTINCT ps.professional_id) FROM professional_services ps JOIN professionals p ON p.id = ps.professional_id WHERE ps.shop_id = ? AND p.active = 1', [$shopId]) > 0,
+            'hours' => (int)DB::val('SELECT COUNT(*) FROM working_hours WHERE shop_id = ?', [$shopId]) > 0,
+            'booking' => (int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$shopId]) > 0,
+        ];
+        return ['week_ahead' => array_values($ahead), 'week_received' => array_values($back), 'setup' => $setup, 'today' => array_map('intval', $today), 'received' => $recv, 'expected' => $exp, 'new_customers' => $newc, 'no_show_rate' => $rate, 'next' => $next];
     }
 }

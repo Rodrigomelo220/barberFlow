@@ -65,8 +65,9 @@ function register_panel_routes(Router $r): void
         $own = Ctx::ownProfessionalIds($ctx);
         $proFilter = input_int('prof') ?: null;
         $rows = Shops::appointmentsBetween($ctx['shop_id'], $d0, $d1, $proFilter);
-        $blocks = DB::all('SELECT b.id, b.starts_at, b.ends_at, b.kind, b.reason, p.name AS professional FROM schedule_blocks b LEFT JOIN professionals p ON p.id = b.professional_id WHERE b.shop_id = ? AND b.starts_at < ? AND b.ends_at > ? ORDER BY b.starts_at', [$ctx['shop_id'], dt_db($d1), dt_db($d0)]);
-        render('panel/agenda', ['ctx' => $ctx, 'day' => $d0, 'rows' => $rows, 'blocks' => $blocks, 'pros' => $pros, 'own' => $own, 'prof' => $proFilter, 'title' => 'Agenda']);
+        $blocks = DB::all('SELECT b.id, b.starts_at, b.ends_at, b.kind, b.reason, b.professional_id, p.name AS professional FROM schedule_blocks b LEFT JOIN professionals p ON p.id = b.professional_id WHERE b.shop_id = ? AND b.starts_at < ? AND b.ends_at > ? ORDER BY b.starts_at', [$ctx['shop_id'], dt_db($d1), dt_db($d0)]);
+        $wh = DB::all('SELECT professional_id, start_time, end_time FROM working_hours WHERE shop_id = ? AND weekday = ?', [$ctx['shop_id'], (int)$d0->format('N')]);
+        render('panel/agenda', ['wh' => $wh, 'ctx' => $ctx, 'day' => $d0, 'rows' => $rows, 'blocks' => $blocks, 'pros' => $pros, 'own' => $own, 'prof' => $proFilter, 'title' => 'Agenda']);
     });
 
     $r->get('/painel/agenda/novo', function () {
@@ -361,6 +362,16 @@ function register_panel_routes(Router $r): void
                 'allow_any_professional' => input_bool('allow_any_professional'), 'allow_online_cancel' => input_bool('allow_online_cancel'), 'cancel_min_notice_minutes' => input_int('cancel_min_notice_minutes', 120),
                 'reminders_enabled' => input_bool('reminders_enabled'), 'reminder_hours' => input('reminder_hours', '24,2')]);
             return 'Configurações salvas.';
+        });
+    });
+
+    $r->post('/painel/configuracoes/imagem', function () {
+        $ctx = panel();
+        pact($ctx, 'settings.manage', '/painel/configuracoes', function () use ($ctx) {
+            $kind = input('kind');
+            if (input_bool('remove')) { Shops::removeImage($ctx['shop_id'], (int)$ctx['user']['id'], $kind); return 'Imagem removida.'; }
+            Shops::saveImage($ctx['shop_id'], (int)$ctx['user']['id'], $kind, $_FILES['image'] ?? []);
+            return $kind === 'logo' ? 'Logo atualizada.' : 'Capa atualizada.';
         });
     });
 

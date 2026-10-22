@@ -265,4 +265,48 @@ t('limite de 3 barbearias por conta; endereço reservado/duplicado recusado', fu
     throws(fn() => Shops::create($v, 'Dup', 'uum', '', 'basico'), 'slug_taken');
     throws(fn() => Shops::create($v, 'Mau', 'a b!', '', 'basico'));
 });
+// ---- logo / capa ----
+function tmp_img(string $kind, int $w = 600, int $h = 300): string
+{
+    $f = tempnam(sys_get_temp_dir(), 'img'); $im = imagecreatetruecolor($w, $h); imagefill($im, 0, 0, imagecolorallocate($im, 180, 140, 80));
+    $kind === 'png' ? imagepng($im, $f) : imagejpeg($im, $f); imagedestroy($im); return $f;
+}
+function fileent(string $path): array { return ['name' => 'x', 'tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => filesize($path)]; }
+t('upload: PNG válido vira logo reduzida e antiga é apagada', function () {
+    $u = mk_user('img1@x.com'); $s = mk_shop($u, 'img1');
+    $n1 = Shops::saveImage($s, $u, 'logo', fileent(tmp_img('png', 900, 900)), true);
+    $path = BF_ROOT . '/uploads/' . $n1; ok(is_file($path), 'arquivo gravado');
+    [$w] = getimagesize($path); ok($w <= 480, 'redimensionada');
+    ok(Shops::imageUrl($n1) !== null);
+    $n2 = Shops::saveImage($s, $u, 'logo', fileent(tmp_img('jpg')), true);
+    ok(!is_file($path), 'logo antiga removida'); ok(is_file(BF_ROOT . '/uploads/' . $n2));
+    eq(DB::val('SELECT logo_path FROM shops WHERE id = ?', [$s]), $n2);
+    Shops::removeImage($s, $u, 'logo'); ok(!is_file(BF_ROOT . '/uploads/' . $n2)); eq(DB::val('SELECT logo_path FROM shops WHERE id = ?', [$s]), null);
+});
+t('upload: arquivo PHP disfarçado de imagem é recusado', function () {
+    $u = mk_user('img2@x.com'); $s = mk_shop($u, 'img2');
+    $f = tempnam(sys_get_temp_dir(), 'evil'); file_put_contents($f, "<?php echo 'x'; ?>");
+    throws(fn() => Shops::saveImage($s, $u, 'cover', fileent($f), true), 'bad_image');
+    $g = tempnam(sys_get_temp_dir(), 'evil'); file_put_contents($g, "GIF89a<?php system('id'); ?>");
+    throws(fn() => Shops::saveImage($s, $u, 'cover', fileent($g), true), 'bad_image', 'GIF não é aceito');
+    eq(DB::val('SELECT cover_path FROM shops WHERE id = ?', [$s]), null);
+});
+t('upload: acima de 2 MB, tipo inválido e sem arquivo', function () {
+    $u = mk_user('img3@x.com'); $s = mk_shop($u, 'img3');
+    $big = tmp_img('png'); file_put_contents($big, str_repeat('0', 2 * 1024 * 1024 + 10), FILE_APPEND);
+    throws(fn() => Shops::saveImage($s, $u, 'cover', fileent($big), true), 'image_too_big');
+    throws(fn() => Shops::saveImage($s, $u, 'banner', fileent(tmp_img('png')), true));
+    throws(fn() => Shops::saveImage($s, $u, 'logo', ['error' => UPLOAD_ERR_NO_FILE], true), 'no_file');
+    throws(fn() => Shops::saveImage($s, $u, 'logo', fileent(tmp_img('png')), false), null, 'só aceita arquivo de upload HTTP');
+});
+t('imageUrl só aceita nome gerado pelo sistema (sem path traversal)', function () {
+    eq(Shops::imageUrl('../config.php'), null); eq(Shops::imageUrl('1-logo-abc.php'), null); eq(Shops::imageUrl(null), null);
+});
+t('dashboard: gráfico semanal tem 7+7 dias e conta só confirmados', function () {
+    $u = mk_user('dash@x.com'); $s = mk_shop($u, 'dash'); $sv = mk_service($s);
+    $d = Shops::dashboard($s, SP);
+    eq(count($d['week_ahead']), 7); eq(count($d['week_received']), 7); eq(array_sum(array_column($d['week_ahead'], 'count')), 0);
+    eq($d['setup']['booking'], false);
+});
+
 done();

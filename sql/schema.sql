@@ -34,6 +34,8 @@ CREATE TABLE shops (
   slug VARCHAR(50) NOT NULL,
   name VARCHAR(80) NOT NULL,
   description VARCHAR(500) NOT NULL DEFAULT '',
+  logo_path VARCHAR(120) NULL,
+  cover_path VARCHAR(120) NULL,
   phone VARCHAR(30) NULL,
   address VARCHAR(200) NOT NULL DEFAULT '',
   timezone VARCHAR(60) NOT NULL DEFAULT 'America/Sao_Paulo',

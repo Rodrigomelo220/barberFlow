@@ -1,5 +1,23 @@
 <?php $s = $ctx['shop']; ?>
 <div class="page-head"><h1>Configurações</h1></div>
+<?php foreach (['logo' => ['Logo', 'Quadrada funciona melhor. JPG, PNG ou WebP, até 2 MB.'], 'cover' => ['Capa', 'Imagem larga (ex.: 1600×600). JPG, PNG ou WebP, até 2 MB.']] as $k => [$lbl, $hint]):
+  $cur = Shops::imageUrl($s[$k . '_path'] ?? null); ?>
+<div class="card img-card">
+  <h2><?= e($lbl) ?></h2>
+  <div class="img-row">
+    <div class="img-prev <?= $k ?>"><?php if ($cur): ?><img src="<?= e($cur) ?>" alt="<?= e($lbl) ?> atual"><?php else: ?><i class="bi bi-image"></i><span>Sem <?= strtolower(e($lbl)) ?></span><?php endif; ?></div>
+    <?php if (Ctx::writable($ctx)): ?>
+    <form method="post" enctype="multipart/form-data" action="<?= e(url('/painel/configuracoes/imagem')) ?>" class="img-form"><?= csrf_field() ?>
+      <input type="hidden" name="kind" value="<?= $k ?>">
+      <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="form-control" required>
+      <p class="small muted"><?= e($hint) ?></p>
+      <button class="btn btn-primary">Enviar <?= strtolower(e($lbl)) ?></button>
+    </form>
+    <?php if ($cur): ?><form method="post" action="<?= e(url('/painel/configuracoes/imagem')) ?>"><?= csrf_field() ?><input type="hidden" name="kind" value="<?= $k ?>"><input type="hidden" name="remove" value="1"><button class="btn btn-outline-secondary btn-sm" data-confirm="Remover a imagem?">Remover</button></form><?php endif; ?>
+    <?php endif; ?>
+  </div>
+</div>
+<?php endforeach; ?>
 <form method="post" action="<?= e(url('/painel/configuracoes')) ?>" class="card"><?= csrf_field() ?>
   <h2>Barbearia</h2>
   <?= fld('name', 'Nome', old('name', $s['name']), ['required' => 1, 'maxlength' => 80]) ?>

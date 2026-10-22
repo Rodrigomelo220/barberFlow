@@ -1,5 +1,5 @@
 <?php $tz = $shop['timezone']; $startsLocal = dt_from_db($a['starts_at'])->setTimezone(new DateTimeZone($tz)); ?>
-<div class="shop-head"><h1><?= e($shop['name']) ?></h1></div>
+<?php require BF_ROOT . '/views/_shop_hero.php'; ?>
 <div class="card">
   <div class="between"><h2 style="margin:0">Seu agendamento</h2><?= appt_badge($a['status']) ?></div>
   <p style="font-size:1.15rem;font-weight:700;margin-top:10px"><?= e(weekday_pt($startsLocal)) ?>, <?= e($startsLocal->format('d/m/Y')) ?> às <?= e($startsLocal->format('H:i')) ?></p>

@@ -1,4 +1,4 @@
-<div class="narrow" style="margin:0 auto">
+<div class="auth-wrap"><?php require BF_ROOT . '/views/_auth_aside.php'; ?><div class="auth-card">
   <h1>Entrar</h1>
   <form method="post" action="<?= e(url('/entrar')) ?>" class="card">
     <?= csrf_field() ?><input type="hidden" name="next" value="<?= e($next) ?>">
@@ -8,4 +8,4 @@
     <p class="small" style="margin-top:12px"><a href="<?= e(url('/recuperar-senha')) ?>">Esqueci minha senha</a></p>
   </form>
   <p class="center">Ainda não tem conta? <a href="<?= e(url('/cadastro')) ?>">Criar conta</a></p>
-</div>
+</div></div>

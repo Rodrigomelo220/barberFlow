@@ -1,4 +1,4 @@
-<div class="narrow" style="margin:0 auto">
+<div class="auth-wrap"><?php require BF_ROOT . '/views/_auth_aside.php'; ?><div class="auth-card">
   <h1>Criar conta</h1>
   <form method="post" action="<?= e(url('/cadastro')) ?>" class="card">
     <?= csrf_field() ?><input type="hidden" name="plano" value="<?= e($plan) ?>">
@@ -9,4 +9,4 @@
     <button class="btn btn-primary w-100">Criar conta</button>
   </form>
   <p class="center">Já tem conta? <a href="<?= e(url('/entrar')) ?>">Entrar</a></p>
-</div>
+</div></div>
