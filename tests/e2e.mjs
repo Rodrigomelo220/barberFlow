@@ -22,7 +22,7 @@ const slug = 'e2e-' + Date.now().toString(36);
 const owner = await newCtx('dono');
 await owner.goto(BASE + '/'); await shot(owner, 'landing');
 ok(await owner.locator('text=Profissional').first().isVisible(), 'landing mostra planos');
-await owner.click('text=Criar conta e testar');
+await owner.click('text=Começar agora');
 await owner.fill('#f_name', 'Zé da Navalha'); await owner.fill('#f_email', slug + '@teste.com'); await owner.fill('#f_password', 'SenhaBoa12345');
 await owner.click('button:has-text("Criar conta")');
 await owner.waitForURL('**/nova-barbearia**');
