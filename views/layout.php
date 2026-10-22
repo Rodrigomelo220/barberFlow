@@ -10,9 +10,9 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e(($title ?? 'BarberFlow') . ($panel ? ' — ' . $ctx['shop']['name'] : ' — BarberFlow')) ?></title>
-<meta name="theme-color" content="#0f1a24">
+<meta name="theme-color" content="#202522">
 <?php if ($panel || ($noindex ?? false)): ?><meta name="robots" content="noindex"><?php endif; ?>
-<link rel="icon" href="data:,"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/style.css')) ?>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23202522'/%3E%3Cpath d='M10 10h20v5H15v5h12v5H15v5h15v5H10z' fill='%23d7b77e'/%3E%3C/svg%3E"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/style.css')) ?>">
 </head><body>
 <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <div class="rail"></div>
