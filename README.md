@@ -1,6 +1,14 @@
-# BarberFlow (PHP + MySQL)
+# Agendô (PHP + MySQL)
 
 Agenda online para barbearias, salões de beleza, design de sobrancelha, manicure/unhas e estética, feita para rodar em hospedagem compartilhada (InfinityFree). PHP 8.0+, MySQL/MariaDB, sem Composer.
+
+> O nome "Agendô" é só o padrão: troque em **Administração → Sistema** (vale para todas as telas, e-mails e termos).
+
+## Vender (modo produção)
+- No instalador escolha **Produção**: some o checkout simulado e o botão de dados de exemplo.
+- Cobrança **manual**: em Administração → Sistema escreva como o cliente paga (Pix etc.). Quando o pagamento chegar, abra o negócio em Administração → Negócios e use **Registrar pagamento**: a assinatura fica ativa por mais 1 mês (idempotente e auditado). Sem pagamento, o acesso segue a regra de carência → modo leitura, sem apagar dados.
+- Ainda **não** são reais: cobrança automática (Asaas), WhatsApp e e-mail. Não prometa lembretes automáticos até conectar.
+- Servidor próprio: PHP 8.0+, MySQL/MariaDB, HTTPS e um cron chamando `cron.php?key=SUA_CHAVE` a cada 5 minutos (a chave está no `config.php`).
 
 ## Instalar no InfinityFree
 1. No painel da InfinityFree, crie um banco MySQL (anote host, banco, usuário e senha).
@@ -26,7 +34,7 @@ Agenda online para barbearias, salões de beleza, design de sobrancelha, manicur
   | Comissões por profissional | não | sim |
   | Página pública, logo/capa, agenda, financeiro, clientes | sim | sim |
 - Administração da plataforma: aba "Administradores" (adicionar por e-mail de conta já cadastrada, remover; nunca fica sem administrador).
-- Botão "Preencher com dados de exemplo" em Configurações (só modo demo, só barbearia sem atendimentos): clientes e atendimentos fictícios.
+- Botão "Preencher com dados de exemplo" em Configurações (só modo teste, só negócio sem atendimentos): clientes e atendimentos fictícios.
 - Concluir atendimento **não** registra pagamento automaticamente.
 - Assinatura, inadimplência gradual (nada é apagado), LGPD (exportar/anonimizar), painel de administrador.
 

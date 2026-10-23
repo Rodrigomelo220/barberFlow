@@ -22,8 +22,8 @@ const slug = 'e2e-' + Date.now().toString(36);
 
 const owner = await newCtx('dono');
 await owner.goto(BASE + '/'); await shot(owner, 'landing');
-ok(await vis(owner.locator('text=Profissional')), 'landing mostra planos');
-await owner.click('text=Começar agora');
+ok(await vis(owner.locator('.lp-plan-name:has-text("Profissional")')), 'landing mostra planos');
+await owner.click('.lp-hero a:has-text("Testar grátis")');
 await owner.fill('#f_name', 'Zé da Navalha'); await owner.fill('#f_email', slug + '@teste.com'); await owner.fill('#f_password', 'SenhaBoa12345');
 await owner.click('button:has-text("Criar conta")');
 await owner.waitForURL('**/nova-barbearia**');

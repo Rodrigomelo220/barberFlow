@@ -108,7 +108,7 @@
     if (!lastBook) return;
     var f = function (t) { return new Date(t * 1000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
     var esc = function (v) { return String(v || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); };
-    var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//BarberFlow//PT', 'BEGIN:VEVENT', 'UID:' + lastBook.starts_ts + '@barberflow', 'DTSTAMP:' + f(Math.floor(Date.now() / 1000)),
+    var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Agenda online//PT', 'BEGIN:VEVENT', 'UID:' + lastBook.starts_ts + '@agenda-online', 'DTSTAMP:' + f(Math.floor(Date.now() / 1000)),
       'DTSTART:' + f(lastBook.starts_ts), 'DTEND:' + f(lastBook.ends_ts), 'SUMMARY:' + esc('Horário na ' + lastBook.shop_name), 'LOCATION:' + esc(lastBook.address), 'DESCRIPTION:' + esc('Gerenciar: ' + lastBook.manage_url), 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })); a.download = 'agendamento.ics'; document.body.appendChild(a); a.click(); a.remove();
   });

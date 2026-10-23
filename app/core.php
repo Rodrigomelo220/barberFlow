@@ -128,6 +128,20 @@ function base_path(): string
     return $b;
 }
 function url(string $path = '/'): string { return base_path() . $path; }
+/** Ajuste do sistema guardado na tabela meta (nome do sistema, instruções de pagamento). Nunca derruba a página se o banco não responder. */
+function sys_setting(string $k, string $default = ''): string
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try { foreach (DB::all("SELECT k, v FROM meta WHERE k IN ('brand_name','support_contact')") as $r) $cache[$r['k']] = (string)$r['v']; } catch (Throwable $e) { /* sem banco ainda (instalador) */ }
+    }
+    return isset($cache[$k]) && $cache[$k] !== '' ? $cache[$k] : $default;
+}
+const DEFAULT_BRAND = 'Agendô';
+/** Nome do sistema exibido em todas as telas. Troque em Administração → Sistema. */
+function brand(): string { return sys_setting('brand_name', DEFAULT_BRAND); }
+function brand_initial(): string { return mb_strtoupper(mb_substr(brand(), 0, 1)); }
 /** Plano de 1 profissional (Solo): telas de equipe/comparação com outros planos não aparecem. */
 function solo_plan(array $ctx): bool { $p = $ctx['billing']['plan'] ?? null; return $p && $p['max_professionals'] !== null && (int)$p['max_professionals'] === 1; }
 /** URL de arquivo estático com versão (data de modificação): o navegador nunca reaproveita CSS/JS antigo após uma atualização. */

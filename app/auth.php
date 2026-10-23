@@ -11,7 +11,7 @@ final class Mailer
             @file_put_contents($dir . '/mail.log', '[' . date('c') . "] Para: $to | $subject\n$body\n---\n", FILE_APPEND | LOCK_EX);
         }
         if (cfg('app.send_mail', false)) {
-            $from = cfg('app.mail_from', 'BarberFlow <nao-responda@localhost>');
+            $from = cfg('app.mail_from', brand() . ' <nao-responda@localhost>');
             @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, "From: $from\r\nContent-Type: text/plain; charset=UTF-8");
         }
     }

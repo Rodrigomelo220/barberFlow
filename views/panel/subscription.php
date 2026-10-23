@@ -25,7 +25,7 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
     <div class="choice" style="cursor:default"><span class="t"><b><?= e($p['name']) ?></b> <?= $cur ? badge('atual', 'blue') : '' ?><br><span class="muted small"><?= e(implode(' · ', decode_list($p['highlights']))) ?></span></span><span class="p"><?= e(money((int)$p['price_cents'])) ?></span>
     <span>
       <?php if ($canStart): ?>
-        <?= post_form('/painel/assinatura/iniciar', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><button class="btn btn-sm btn-primary">Pagar</button>', 'inline') ?>
+        <?= post_form('/painel/assinatura/iniciar', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><button class="btn btn-sm btn-primary">' . ($demo ? 'Pagar' : 'Assinar') . '</button>', 'inline') ?>
         <?php if ((int)$p['trial_days'] > 0 && !$trialUsed): ?><?= post_form('/painel/assinatura/iniciar', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><input type="hidden" name="trial" value="1"><button class="btn btn-sm btn-outline-dark">Testar ' . (int)$p['trial_days'] . ' dias</button>', 'inline') ?><?php endif; ?>
       <?php elseif (!$cur && in_array($st, ['active', 'trialing'], true)): ?>
         <?= post_form('/painel/assinatura/plano', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><button class="btn btn-sm btn-outline-dark">Trocar</button>', 'inline', 'Trocar para o plano ' . $p['name'] . '?') ?>
@@ -33,6 +33,14 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
   <?php endforeach; ?>
   <?php if ($st === 'active'): ?><p class="hint">A troca vale a partir de agora; a nova cobrança acompanha o próximo ciclo.</p><?php endif; ?>
 </div>
+
+<?php if (!$demo && $sub && in_array($st, ['incomplete', 'past_due', 'canceled', 'suspended'], true) || (!$demo && $st === 'trialing')): ?>
+<div class="card"><h2>Como pagar</h2>
+  <?php $how = sys_setting('support_contact'); ?>
+  <p class="mb-2">Plano <b><?= $plan ? e($plan['name']) : '—' ?></b> · <b><?= $sub ? e(money((int)$sub['price_cents'])) : '' ?></b> por mês.</p>
+  <?php if ($how !== ''): ?><p style="white-space:pre-line" class="mb-2"><?= e($how) ?></p><?php else: ?><p class="mb-2">Fale com o suporte para receber os dados de pagamento.</p><?php endif; ?>
+  <p class="muted small mb-0">Depois que o pagamento for conferido, sua assinatura é ativada e esta tela mostra a data até quando está pago.</p></div>
+<?php endif; ?>
 
 <?php if ($charges): ?><div class="card"><h2>Cobranças</h2><div class="table-responsive"><table class="table"><thead><tr><th>Vencimento</th><th class="num">Valor</th><th>Situação</th><th>Pago em</th></tr></thead><tbody>
 <?php foreach ($charges as $c): ?><tr><td><?= $c['due_date'] ? e(date('d/m/Y', strtotime($c['due_date']))) : '—' ?></td><td class="num"><?= e(money((int)$c['amount_cents'])) ?></td><td><?= e(['pending' => 'Pendente', 'overdue' => 'Vencida', 'confirmed' => 'Confirmada', 'received' => 'Recebida', 'refunded' => 'Estornada', 'chargeback' => 'Contestada'][$c['status']] ?? $c['status']) ?></td><td><?= $c['received_at'] ? e(dt_local($c['received_at'], $tz, 'd/m/Y')) : '—' ?></td></tr><?php endforeach; ?></tbody></table></div></div><?php endif; ?>

@@ -30,9 +30,22 @@ function register_admin_routes(Router $r): void
         aact($u, '/admin/barbearias/' . (int)$id, function ($u) use ($id, $acao) {
             if ($acao === 'suspender') { Admin::suspend((int)$u['id'], (int)$id, input('reason')); return 'Negócio suspenso.'; }
             if ($acao === 'reativar') { Admin::reactivate((int)$u['id'], (int)$id, input('reason')); return 'Negócio reativado.'; }
+            if ($acao === 'pagamento') {
+                $raw = preg_replace('/[^\d,\.]/', '', input('amount')); if (str_contains($raw, ',')) $raw = str_replace('.', '', $raw);
+                $v = (int)round(((float)str_replace(',', '.', $raw)) * 100);
+                Admin::recordManualPayment((int)$u['id'], (int)$id, $v, input('note'), input('token')); return 'Pagamento registrado. A assinatura está ativa por mais 1 mês.';
+            }
             if ($acao === 'nota') { Admin::addNote((int)$u['id'], (int)$id, input('note')); return 'Nota salva.'; }
             throw new BusinessError('Ação inválida.');
         });
+    });
+    $r->get('/admin/sistema', function () {
+        $u = admin_user();
+        render('admin/system', ['u' => $u, 'title' => 'Sistema'], 'layout_admin');
+    });
+    $r->post('/admin/sistema', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) { Admin::saveSystem((int)$u['id'], input('brand'), input('support')); return 'Configurações salvas.'; });
     });
     $r->get('/admin/administradores', function () {
         $u = admin_user();

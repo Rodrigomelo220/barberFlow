@@ -62,6 +62,40 @@ final class Admin
         if (!DB::exec("UPDATE shops SET status = 'active' WHERE id = ?", [$shopId])) throw new BusinessError('Negócio não encontrado.', 'not_found', 404);
         audit($shopId, $adminId, 'admin.shop_reactivated', 'shop', $shopId, $r, 'platform_admin');
     }
+    /**
+     * Registro manual de pagamento (Pix/dinheiro conferido por um administrador autenticado). Ativa ou renova 1 mês,
+     * com a mesma regra do webhook. O token do formulário torna o registro idempotente (clique duplo não renova 2x).
+     */
+    public static function recordManualPayment(int $adminId, int $shopId, int $amountCents, string $note, string $token): void
+    {
+        if ($amountCents < 100 || $amountCents > 10000000) throw new BusinessError('Informe um valor válido.');
+        if (!preg_match('/^[a-f0-9]{16,64}$/', $token)) throw new BusinessError('Formulário inválido. Recarregue a página.');
+        $note = mb_substr(trim($note), 0, 200);
+        DB::tx(function () use ($adminId, $shopId, $amountCents, $note, $token) {
+            $sub = DB::one('SELECT * FROM subscriptions WHERE shop_id = ? FOR UPDATE', [$shopId]);
+            if (!$sub) throw new BusinessError('Negócio sem assinatura.', 'not_found', 404);
+            if (DB::one('SELECT id FROM billing_charges WHERE provider_ref = ?', ['manual_' . $token])) return;   // já registrado
+            $now = now_utc();
+            DB::insert('billing_charges', ['shop_id' => $shopId, 'subscription_id' => $sub['id'], 'provider_ref' => 'manual_' . $token, 'status' => 'received',
+                'amount_cents' => $amountCents, 'due_date' => $now->format('Y-m-d'), 'received_at' => dt_db($now), 'created_at' => dt_db($now)]);
+            $start = $now;
+            if ($sub['status'] === 'trialing' && $sub['trial_ends_at']) { $te = dt_from_db($sub['trial_ends_at']); if ($te > $start) $start = $te; }
+            if ($sub['status'] === 'active' && $sub['current_period_end']) { $pe = dt_from_db($sub['current_period_end']); if ($pe > $start) $start = $pe; }
+            DB::exec("UPDATE subscriptions SET status='active', current_period_end=?, grace_until=NULL, cancel_at_period_end=0, canceled_at=NULL WHERE id = ?", [dt_db($start->modify('+1 month')), $sub['id']]);
+            audit($shopId, $adminId, 'admin.manual_payment', 'subscription', $sub['id'], money($amountCents) . ($note !== '' ? ' — ' . $note : ''), 'platform_admin');
+        });
+    }
+
+    public static function saveSystem(int $adminId, string $brand, string $support): void
+    {
+        $brand = trim(preg_replace('/\s+/u', ' ', $brand));
+        if (mb_strlen($brand) < 2 || mb_strlen($brand) > 40) throw new BusinessError('O nome do sistema precisa ter de 2 a 40 caracteres.');
+        $support = mb_substr(trim($support), 0, 600);
+        DB::q("REPLACE INTO meta (k, v) VALUES ('brand_name', ?)", [$brand]);
+        DB::q("REPLACE INTO meta (k, v) VALUES ('support_contact', ?)", [$support]);
+        audit(null, $adminId, 'admin.system_saved', 'meta', null, null, 'platform_admin');
+    }
+
     public static function addNote(int $adminId, int $shopId, string $note): void
     {
         $note = trim($note);

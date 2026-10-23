@@ -397,7 +397,7 @@ function register_panel_routes(Router $r): void
     $r->post('/painel/assinatura/iniciar', function () use ($subAct) {
         $subAct('/painel/assinatura', function ($ctx) {
             $res = Billing::start($ctx['shop_id'], (int)$ctx['user']['id'], input('plan'), input_bool('trial'));
-            return $res['status'] === 'trialing' ? ['Período de teste iniciado.', '/painel'] : ['Cobrança gerada. Conclua o pagamento para liberar o painel.', '/dev/pagamento'];
+            return $res['status'] === 'trialing' ? ['Período de teste iniciado.', '/painel'] : ['Plano escolhido. Veja abaixo como concluir o pagamento.', cfg('app.mode', 'demo') === 'demo' ? '/dev/pagamento' : '/painel/assinatura'];
         });
     });
     $r->post('/painel/assinatura/plano', function () use ($subAct) {

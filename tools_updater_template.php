@@ -1,5 +1,5 @@
 <?php
-/* BarberFlow — atualizador de arquivo único.
+/* Atualizador de arquivo único.
  * Envie este arquivo para a pasta do site (htdocs), abra  atualizar.php?k=CHAVE  e clique em "Atualizar agora".
  * Substitui os arquivos do sistema, ajusta o banco (sem apagar dados) e se apaga no final.
  * Mantém: config.php, uploads (logo/capa), storage. */
@@ -7,7 +7,7 @@ declare(strict_types=1);
 const UPD_KEY = '__KEY__';
 header('X-Robots-Tag: noindex'); header('Content-Type: text/html; charset=utf-8');
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-function page(string $body): never { echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atualizar BarberFlow</title><body style="font:16px system-ui;max-width:640px;margin:30px auto;padding:0 16px;color:#202522;background:#f5f3ef"><h1>Atualizar BarberFlow</h1>' . $body; exit; }
+function page(string $body): never { echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atualizar o sistema</title><body style="font:16px system-ui;max-width:640px;margin:30px auto;padding:0 16px;color:#202522;background:#f5f3ef"><h1>Atualizar o sistema</h1>' . $body; exit; }
 if (!class_exists('ZipArchive')) page('<p>Este servidor não tem a extensão ZipArchive. Avise quem te enviou o arquivo.</p>');
 $root = __DIR__;
 if (!is_file($root . '/config.php')) page('<p>Não achei o <code>config.php</code> aqui. Este arquivo deve ficar na mesma pasta do sistema já instalado (se ainda não instalou, use o <code>instalar.php</code>).</p>');

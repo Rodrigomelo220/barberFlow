@@ -358,7 +358,7 @@ t('destaques dos planos batem com os números aplicados', function () {
         $txt = implode(' | ', $p[10]);
         ok(str_contains($txt, $p[5] === 1 ? '1 profissional' : "Até {$p[5]} profissionais"), "{$p[1]}: profissionais");
         ok($p[6] === null ? str_contains($txt, 'sem limite') : str_contains($txt, "Até {$p[6]} agendamentos"), "{$p[1]}: agendamentos");
-        ok($p[9] ? str_contains($txt, 'Comissões por profissional') && !str_contains($txt, 'Sem comissões') : str_contains($txt, 'Sem comissões'), "{$p[1]}: comissões");
+        ok($p[9] ? str_contains($txt, 'Comissões por profissional') : !str_contains($txt, 'omiss'), "{$p[1]}: comissões");
     }
 });
 t('administradores: promover conta existente, recusar inexistente, não remover a si nem o último', function () {
@@ -385,5 +385,31 @@ t('tipos de negócio: cada tipo gera seus próprios serviços e clientes; tipo i
     $d = DB::one('SELECT * FROM shops WHERE id = ?', [$s]);
     Shops::updateSettings($s, $u, ['name' => 'X Studio', 'business_type' => 'unhas', 'description' => '', 'phone' => '', 'address' => '', 'slot_grid_minutes' => 15, 'min_notice_minutes' => 60, 'max_days_ahead' => 30, 'allow_any_professional' => 1, 'allow_online_cancel' => 1, 'cancel_min_notice_minutes' => 120, 'reminders_enabled' => 1, 'reminder_hours' => '24,2']);
     eq(DB::val('SELECT business_type FROM shops WHERE id = ?', [$s]), 'unhas');
+});
+t('pagamento manual (Pix): ativa, renova a partir do vencimento, é idempotente e auditado; valor e token inválidos recusados', function () {
+    $adm = mk_user('admpay@x.com', 'Adm', true); $u = mk_user('payer@x.com');
+    $s = Shops::create($u, 'Payer', 'payer-shop', '', 'basico', 'salao');
+    $tok = bin2hex(random_bytes(12));
+    Admin::recordManualPayment($adm, $s, 9990, 'Pix teste', $tok);
+    $sub = DB::one('SELECT * FROM subscriptions WHERE shop_id = ?', [$s]);
+    eq($sub['status'], 'active'); ok(dt_from_db($sub['current_period_end']) > now_utc()->modify('+27 days'), 'período de ~1 mês');
+    $end1 = $sub['current_period_end'];
+    Admin::recordManualPayment($adm, $s, 9990, 'Pix teste', $tok);
+    eq(DB::val('SELECT current_period_end FROM subscriptions WHERE shop_id = ?', [$s]), $end1, 'idempotente');
+    eq((int)DB::val("SELECT COUNT(*) FROM billing_charges WHERE shop_id = ? AND status = 'received'", [$s]), 1);
+    Admin::recordManualPayment($adm, $s, 9990, '', bin2hex(random_bytes(12)));
+    ok(dt_from_db(DB::val('SELECT current_period_end FROM subscriptions WHERE shop_id = ?', [$s])) > dt_from_db($end1)->modify('+27 days'), 'soma a partir do vencimento');
+    ok((int)DB::val("SELECT COUNT(*) FROM audit_logs WHERE shop_id = ? AND action = 'admin.manual_payment'", [$s]) === 2, 'auditado');
+    throws(fn() => Admin::recordManualPayment($adm, $s, 0, '', bin2hex(random_bytes(12))));
+    throws(fn() => Admin::recordManualPayment($adm, $s, 9990, '', 'xx'));
+    eq(Billing::state($s)['access']['level'], 'full');
+});
+t('nome do sistema: padrão Agendô, troca pelo admin, valida tamanho', function () {
+    $adm = mk_user('admbrand@x.com', 'Adm', true);
+    eq(DEFAULT_BRAND, 'Agendô');
+    Admin::saveSystem($adm, '  Meu   Sistema ', 'Pix 123');
+    eq(DB::val("SELECT v FROM meta WHERE k = 'brand_name'"), 'Meu Sistema');
+    throws(fn() => Admin::saveSystem($adm, 'A', ''));
+    throws(fn() => Admin::saveSystem($adm, str_repeat('x', 41), ''));
 });
 done();

@@ -24,7 +24,7 @@ $reqs = [
 ];
 $reqOk = !in_array(false, $reqs, true);
 
-$v = ['host' => 'localhost', 'port' => '3306', 'name' => '', 'user' => '', 'pass' => '', 'admin_name' => '', 'admin_email' => '', 'app_url' => ''];
+$v = ['host' => 'localhost', 'port' => '3306', 'name' => '', 'user' => '', 'pass' => '', 'admin_name' => '', 'admin_email' => '', 'app_url' => '', 'brand' => 'Agendô', 'mode' => 'live'];
 if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST' && $reqOk) {
     foreach ($v as $k => $_) if (isset($_POST[$k]) && is_string($_POST[$k])) $v[$k] = trim($_POST[$k]);
     $adminPass = (string)($_POST['admin_pass'] ?? '');
@@ -56,9 +56,11 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST' && $reqOk) {
             foreach ($plans as $p) $ins->execute([$p[0], $p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $p[7], $p[8], $p[9], json_encode($p[10], JSON_UNESCAPED_UNICODE), $p[11]]);
             $pdo->prepare('INSERT INTO users (email,password_hash,name,is_admin,created_at) VALUES (?,?,?,1,?)')->execute([mb_strtolower($v['admin_email']), password_hash($adminPass, PASSWORD_DEFAULT), $v['admin_name'], $now]);
             $pdo->prepare("REPLACE INTO meta (k,v) VALUES ('installed_at', ?)")->execute([$now]);
+            $brandName = mb_substr($v['brand'] !== '' ? $v['brand'] : 'Agendô', 0, 40);
+            $pdo->prepare("REPLACE INTO meta (k,v) VALUES ('brand_name', ?)")->execute([$brandName]);
 
             $cfg = ['db' => ['host' => $v['host'], 'port' => (int)$v['port'], 'name' => $v['name'], 'user' => $v['user'], 'pass' => $v['pass']],
-                'app' => ['url' => rtrim($v['app_url'], '/'), 'mode' => 'demo', 'send_mail' => false, 'mail_from' => 'BarberFlow <nao-responda@localhost>',
+                'app' => ['url' => rtrim($v['app_url'], '/'), 'mode' => $v['mode'] === 'demo' ? 'demo' : 'live', 'send_mail' => false, 'mail_from' => $brandName . ' <nao-responda@localhost>',
                     'webhook_token' => bin2hex(random_bytes(24)), 'cron_key' => bin2hex(random_bytes(16))]];
             $out = "<?php\n// Gerado pelo instalador. NÃO publique este arquivo.\nreturn " . var_export($cfg, true) . ";\n";
             if (file_put_contents($configFile, $out, LOCK_EX) === false) {
@@ -74,7 +76,7 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST' && $reqOk) {
 }
 ?><!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
-<title>Instalação — BarberFlow</title>
+<title>Instalação do sistema</title>
 <style>
 body{margin:0;background:#eef1f0;color:#0f1a24;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:560px;margin:0 auto;padding:24px 16px 48px}
@@ -84,7 +86,7 @@ label{display:block;font-weight:600;margin:12px 0 4px} input{width:100%;box-sizi
 .hint{color:#55636d;font-size:.9rem;margin:2px 0 0} button{margin-top:18px;background:#0f1a24;color:#fff;border:0;border-radius:8px;padding:12px 18px;font:inherit;font-weight:600;width:100%}
 .err{background:#fdecea;border:1px solid #c9362b;border-radius:8px;padding:10px 12px;margin:8px 0} .ok{color:#1b6b3a} .bad{color:#c9362b;font-weight:600} code{background:#eef1f0;padding:1px 5px;border-radius:4px}
 </style><link rel="icon" href="data:,"></head><body><main>
-<div class="rail"></div><h1>Instalação do BarberFlow</h1>
+<div class="rail"></div><h1>Instalação do sistema</h1>
 <?php if ($installed && !$done): ?>
   <div class="card"><b>O sistema já está instalado.</b><p>Por segurança, <b>apague o arquivo <code>instalar.php</code></b> do servidor. Para reinstalar, apague também o <code>config.php</code> e esvazie o banco.</p><p><a href="./">Abrir o sistema</a></p></div>
 <?php elseif ($done): ?>
@@ -92,7 +94,7 @@ label{display:block;font-weight:600;margin:12px 0 4px} input{width:100%;box-sizi
   <ol><li><b>Apague agora o arquivo <code>instalar.php</code></b> (pelo Gerenciador de Arquivos ou FTP).</li>
   <li>Entre em <a href="entrar">/entrar</a> com o e-mail e a senha do administrador (painel em <code>/admin</code>).</li>
   <li>Para testar como negócio, crie outra conta em <a href="cadastro">/cadastro</a>.</li></ol>
-  <p class="hint">Pagamento e WhatsApp são <b>simulados</b> nesta versão. Leia o README.</p></div>
+  <p class="hint">Cobrança automática, WhatsApp e e-mail ainda <b>não são reais</b> nesta versão: registre os pagamentos em Administração → Negócios. Leia o README.</p></div>
 <?php else: ?>
   <div class="card"><b>Requisitos</b><ul style="padding-left:18px;margin:6px 0">
   <?php foreach ($reqs as $k => $ok): ?><li><?= $h($k) ?>: <?= $ok ? '<span class="ok">ok</span>' : '<span class="bad">faltando</span>' ?></li><?php endforeach; ?></ul></div>
@@ -114,6 +116,11 @@ label{display:block;font-weight:600;margin:12px 0 4px} input{width:100%;box-sizi
     <hr style="border:0;border-top:1px solid #d3dadc;margin:20px 0">
     <b>3. Endereço do site (opcional)</b>
     <label>URL pública</label><input name="app_url" value="<?= $h($v['app_url']) ?>" placeholder="https://seusite.infinityfreeapp.com"><p class="hint">Usada em links de e-mail. Se vazio, o sistema detecta sozinho.</p>
+    <hr style="border:0;border-top:1px solid #d3dadc;margin:20px 0">
+    <b>4. Nome e modo</b>
+    <label>Nome do sistema</label><input name="brand" value="<?= $h($v['brand']) ?>" maxlength="40"><p class="hint">Aparece no site, nos e-mails e nos termos. Pode ser trocado depois em Administração → Sistema.</p>
+    <label>Modo</label><select name="mode" style="width:100%;padding:10px;border:1px solid #9aa7ad;border-radius:8px;font:inherit"><option value="live" <?= $v['mode'] === 'live' ? 'selected' : '' ?>>Produção (para clientes reais)</option><option value="demo" <?= $v['mode'] === 'demo' ? 'selected' : '' ?>>Teste (checkout simulado e dados de exemplo)</option></select>
+    <p class="hint">Em produção não existe checkout simulado nem botão de dados de exemplo.</p>
     <button type="submit">Instalar</button>
   </form>
   <?php endif; ?>
