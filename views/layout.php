@@ -17,6 +17,7 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <div class="rail"></div>
 <header class="top"><div class="container-x">
+  <?php if ($panel): ?><button type="button" class="burger" id="burgerBtn" aria-label="Abrir menu" aria-controls="moreSheet" aria-expanded="false"><i class="bi bi-list"></i></button><?php endif; ?>
   <a class="brand" href="<?= e(url($panel ? '/painel' : '/')) ?>"><i></i>BarberFlow</a>
   <span class="grow"></span>
   <?php require BF_ROOT . '/views/_theme_btn.php'; ?>
@@ -35,18 +36,36 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
   <?php endif; ?>
 </div></header>
 <?php if ($panel): $lvl = $ctx['billing']['access']['level']; ?>
+<?php
+$items = [['/painel', 'Início', 'house', true], ['/painel/agenda', 'Agenda', 'calendar3', true], ['/painel/clientes', 'Clientes', 'people', Ctx::can($ctx, 'customers.view')],
+  ['/painel/servicos', 'Serviços', 'scissors', Ctx::can($ctx, 'services.manage')], ['/painel/equipe', 'Equipe', 'person-badge', Ctx::can($ctx, 'professionals.manage')],
+  ['/painel/bloqueios', 'Bloqueios', 'slash-circle', Ctx::can($ctx, 'agenda.manage')], ['/painel/financeiro', 'Financeiro', 'cash-coin', Ctx::can($ctx, 'finance.view')],
+  ['/painel/mensagens', 'Mensagens', 'chat-dots', Ctx::can($ctx, 'messages.view')], ['/painel/configuracoes', 'Configurações', 'gear', Ctx::can($ctx, 'settings.manage')],
+  ['/painel/assinatura', 'Assinatura', 'credit-card', Ctx::can($ctx, 'billing.manage')]];
+$items = array_values(array_filter($items, fn($i) => $i[3]));
+$primaryHrefs = ['/painel', '/painel/agenda', '/painel/clientes', '/painel/financeiro'];
+$primary = array_values(array_filter($items, fn($i) => in_array($i[0], $primaryHrefs, true)));
+$more = array_values(array_filter($items, fn($i) => !in_array($i[0], $primaryHrefs, true)));
+$isOn = fn($h) => $h === '/painel' ? $cur === '/painel' : str_starts_with($cur, $h);
+$moreOn = (bool)array_filter($more, fn($i) => $isOn($i[0]));
+?>
 <nav class="tabs" aria-label="Seções do painel"><div class="container-x">
-  <?= $nav('/painel', 'Início', 'house') ?>
-  <?= $nav('/painel/agenda', 'Agenda', 'calendar3') ?>
-  <?php if (Ctx::can($ctx, 'customers.view')): ?><?= $nav('/painel/clientes', 'Clientes', 'people') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'services.manage')): ?><?= $nav('/painel/servicos', 'Serviços', 'scissors') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'professionals.manage')): ?><?= $nav('/painel/equipe', 'Equipe', 'person-badge') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'agenda.manage')): ?><?= $nav('/painel/bloqueios', 'Bloqueios', 'slash-circle') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'finance.view')): ?><?= $nav('/painel/financeiro', 'Financeiro', 'cash-coin') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'messages.view')): ?><?= $nav('/painel/mensagens', 'Mensagens', 'chat-dots') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'settings.manage')): ?><?= $nav('/painel/configuracoes', 'Configurações', 'gear') ?><?php endif; ?>
-  <?php if (Ctx::can($ctx, 'billing.manage')): ?><?= $nav('/painel/assinatura', 'Assinatura', 'credit-card') ?><?php endif; ?>
+  <?php foreach ($items as $i): ?><?= $nav($i[0], $i[1], $i[2]) ?><?php endforeach; ?>
 </div></nav>
+<nav class="bnav" aria-label="Menu principal">
+  <?php foreach ($primary as $i): ?><a href="<?= e(url($i[0])) ?>"<?= $isOn($i[0]) ? ' aria-current="page"' : '' ?>><?= icon($i[2]) ?><span><?= e($i[1]) ?></span></a><?php endforeach; ?>
+  <button type="button" id="moreBtn" aria-expanded="false" aria-controls="moreSheet"<?= $moreOn ? ' class="on"' : '' ?>><?= icon('grid') ?><span>Mais</span></button>
+</nav>
+<div class="sheet-bg" id="moreBg" hidden></div>
+<div class="sheet" id="moreSheet" role="dialog" aria-label="Mais opções" hidden>
+  <div class="sheet-grip"></div>
+  <p class="sheet-shop"><?= e($ctx['shop']['name']) ?></p>
+  <div class="sheet-grid">
+    <?php foreach ($items as $i): ?><a href="<?= e(url($i[0])) ?>"<?= $isOn($i[0]) ? ' aria-current="page"' : '' ?>><?= icon($i[2]) ?><span><?= e($i[1]) ?></span></a><?php endforeach; ?>
+    <a href="<?= e(url('/b/' . $ctx['shop']['slug'])) ?>" target="_blank" rel="noopener"><?= icon('box-arrow-up-right') ?><span>Página pública</span></a>
+    <?= post_form('/sair', '<button><i class="bi bi-box-arrow-right"></i><span>Sair</span></button>', 'sheet-form') ?>
+  </div>
+</div>
 <?php endif; ?>
 <main id="conteudo"><div class="container-x">
   <?php if ($panel && $ctx['billing']['access']['message'] && !in_array($ctx['billing']['access']['reason'], ['ok'], true)): $lv = $ctx['billing']['access']['level']; ?>

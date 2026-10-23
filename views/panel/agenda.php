@@ -32,6 +32,28 @@ $clamp = fn($v) => max($lo, min($hi, $v));
 <?php if (!$cols): ?>
   <div class="card empty-state"><i class="bi bi-person-plus"></i><h2>Nenhum profissional ativo</h2><p class="muted">Cadastre quem atende para ver a agenda.</p><a class="btn btn-primary" href="<?= e(url('/painel/equipe')) ?>">Ir para a equipe</a></div>
 <?php else: ?>
+<div class="agenda-cards">
+  <?php
+  $feed = [];
+  foreach ($rows as $a) $feed[] = ['t' => dt_from_db($a['starts_at'])->getTimestamp(), 'k' => 'a', 'v' => $a];
+  foreach ($blocks as $b) if ($prof === null || $b['professional_id'] === null || (int)$b['professional_id'] === $prof) $feed[] = ['t' => dt_from_db($b['starts_at'])->getTimestamp(), 'k' => 'b', 'v' => $b];
+  usort($feed, fn($x, $y) => $x['t'] <=> $y['t']);
+  ?>
+  <?php if (!$feed): ?><div class="card empty-state"><i class="bi bi-calendar2-check"></i><h2>Dia livre</h2><p class="muted">Nenhum agendamento neste dia.</p></div><?php endif; ?>
+  <?php foreach ($feed as $f): $a = $f['v']; ?>
+    <?php if ($f['k'] === 'b'): ?>
+      <div class="acard block"><div class="acard-time"><b><?= e(dt_local($a['starts_at'], $ctx['tz'], 'H:i')) ?></b><span><?= e(dt_local($a['ends_at'], $ctx['tz'], 'H:i')) ?></span></div>
+        <div class="acard-body"><b><i class="bi bi-lock-fill"></i> <?= e($a['reason'] ?: 'Bloqueio') ?></b><span class="muted small"><?= $a['professional'] ? e($a['professional']) : 'Todo o negócio' ?></span></div></div>
+    <?php else: $dead = in_array($a['status'], ['canceled', 'no_show'], true); ?>
+      <a class="acard<?= $dead ? ' dead' : '' ?>" href="<?= e(url('/painel/agendamentos/' . $a['id'])) ?>" style="--pc:<?= e($a['professional_color']) ?>">
+        <div class="acard-time"><b><?= e(dt_local($a['starts_at'], $ctx['tz'], 'H:i')) ?></b><span><?= e(dt_local($a['ends_at'], $ctx['tz'], 'H:i')) ?></span></div>
+        <div class="acard-body"><b><?= e($a['customer_name']) ?></b><span><?= e($a['services']) ?></span>
+          <span class="muted small"><span class="dot" style="background:<?= e($a['professional_color']) ?>"></span><?= e($a['professional_name']) ?> · <?= e(money((int)$a['total_price_cents'])) ?></span></div>
+        <div class="acard-st"><?= appt_badge($a['status']) ?></div>
+      </a>
+    <?php endif; ?>
+  <?php endforeach; ?>
+</div>
 <div class="card tl-card">
   <div class="tl-scroll">
   <div class="tl" style="--cols:<?= count($cols) ?>">

@@ -128,12 +128,25 @@ function base_path(): string
     return $b;
 }
 function url(string $path = '/'): string { return base_path() . $path; }
+/** HTTPS direto ou atrás de proxy/CDN (hospedagens compartilhadas). Em domínio público sem sinal nenhum, assume https; só localhost/IP ficam em http. */
+function is_https(bool $assumePublic = true): bool
+{
+    $s = $_SERVER;
+    if (!empty($s['HTTPS']) && strtolower((string)$s['HTTPS']) !== 'off') return true;
+    if ((string)($s['SERVER_PORT'] ?? '') === '443') return true;
+    if (str_contains(strtolower((string)($s['HTTP_X_FORWARDED_PROTO'] ?? '')), 'https')) return true;
+    if (strtolower((string)($s['HTTP_X_FORWARDED_SSL'] ?? '')) === 'on' || strtolower((string)($s['HTTP_FRONT_END_HTTPS'] ?? '')) === 'on') return true;
+    if (str_contains((string)($s['HTTP_CF_VISITOR'] ?? ''), '"scheme":"https"')) return true;
+    if (!$assumePublic) return false;
+    $host = strtolower(preg_replace('/:\d+$/', '', (string)($s['HTTP_HOST'] ?? 'localhost')));
+    $local = $host === 'localhost' || preg_match('/^\d{1,3}(\.\d{1,3}){3}$/', $host) || str_ends_with($host, '.local') || str_ends_with($host, '.test') || !str_contains($host, '.');
+    return !$local;
+}
 function abs_url(string $path = '/'): string
 {
     $u = cfg('app.url');
     if (!$u) {
-        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-        $u = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . base_path();
+        $u = (is_https() ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . base_path();
     }
     return rtrim($u, '/') . $path;
 }
@@ -279,7 +292,7 @@ final class Router
 function start_session(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) return;
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $https = is_https(false);   // cookie Secure só com HTTPS comprovado (senão o login some em http)
     session_name('bfsess');
     session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
     ini_set('session.use_strict_mode', '1');

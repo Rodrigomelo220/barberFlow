@@ -11,6 +11,7 @@ Agenda online para barbearias, salões de beleza, design de sobrancelha, manicur
 
 ## O que está implementado
 - Tipo de negócio (barbearia, salão, sobrancelha, unhas, estética, outro) escolhido ao cadastrar e alterável em Configurações; muda os serviços/equipe do "dados de exemplo". As regras do sistema são as mesmas para todos.
+- Celular: menu inferior + menu hambúrguer, agenda e tabelas em cartões (nada cortado). Links públicos detectam https sozinhos (inclusive atrás de proxy da hospedagem).
 - Tema claro/escuro (botão no topo; lembra a escolha e segue o aparelho na primeira visita).
 - Página pública de agendamento (capa, logo, etapas, dias, horários), cancelar/remarcar por link secreto.
 - Reserva atômica (transação + travas): sem horário duplicado, testado com processos paralelos.
