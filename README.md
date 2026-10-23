@@ -14,7 +14,14 @@ Agenda online para barbearias, feita para rodar em hospedagem compartilhada (Inf
 - Reserva atômica (transação + travas): sem horário duplicado, testado com processos paralelos.
 - Painel: início com gráficos, agenda em linha do tempo, clientes, serviços, equipe, bloqueios, financeiro, despesas, mensagens, configurações.
 - Logo e capa enviadas pela própria barbearia (validadas e regravadas; `uploads/` não executa scripts).
-- Dois planos: Solo (R$ 99,90, 1 profissional) e Profissional (R$ 169,90, até 5 profissionais, comissões).
+- Dois planos (definidos em `sql/plans.php`; os destaques mostrados ao cliente são gerados dos mesmos números que o sistema aplica):
+  | | Solo R$ 99,90 | Profissional R$ 169,90 |
+  |---|---|---|
+  | Profissionais ativos | 1 | até 5 |
+  | Agendamentos/mês | até 300 | sem limite |
+  | Mensagens/mês (confirmação + lembretes) | até 100 | até 600 |
+  | Comissões por profissional | não | sim |
+  | Página pública, logo/capa, agenda, financeiro, clientes | sim | sim |
 - Botão "Preencher com dados de exemplo" em Configurações (só modo demo, só barbearia sem atendimentos): clientes e atendimentos fictícios.
 - Concluir atendimento **não** registra pagamento automaticamente.
 - Assinatura, inadimplência gradual (nada é apagado), LGPD (exportar/anonimizar), painel de administrador.

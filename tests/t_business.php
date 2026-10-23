@@ -326,4 +326,39 @@ t('planos oficiais: só dois (R$ 99,90 com 1 profissional e R$ 169,90 com equipe
     eq(count($plans), 2); eq($plans[0][3], 9990); eq($plans[0][5], 1); eq($plans[1][3], 16990); ok($plans[1][5] > 1);
     foreach ($plans as $p) ok($p[7] > 0 || $p[8] === 0, 'nenhum plano com mensagens ilimitadas');
 });
+// ---- cada plano oficial dá exatamente o que promete ----
+$GLOBALS['REAL'] = (function () {
+    $u = DB::pdo()->prepare('UPDATE plans SET name=?, description=?, price_cents=?, trial_days=?, max_professionals=?, max_appointments_month=?, max_messages_month=?, feat_reminders=?, feat_commissions=?, highlights=?, sort_order=? WHERE code=?');
+    foreach (require BF_ROOT . '/sql/plans.php' as $p) $u->execute([$p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $p[7], $p[8], $p[9], json_encode($p[10], JSON_UNESCAPED_UNICODE), $p[11], $p[0]]);
+    return true;
+})();
+t('Solo: 1 profissional, sem comissão, com lembretes; Profissional: equipe, comissão, sem limite de agendamentos', function () {
+    $u = mk_user('solo@x.com'); $s = mk_shop($u, 'solo', 'basico');
+    throws(fn() => Shops::createProfessional($s, $u, ['name' => 'Segundo', 'active' => 1]), 'plan_limit', 'Solo não aceita 2º profissional');
+    throws(fn() => Shops::updateProfessional($s, $u, pro_of($s), ['name' => 'Eu', 'commission' => 30, 'active' => 1]), 'feature_not_in_plan', 'Solo não tem comissão');
+    $sv = mk_service($s); set_now('2026-11-02 12:00:00');
+    try { $b = book($s, [$sv], pro_of($s), '2026-11-05 10:00', 'Cli', '11970001111', ['whatsapp_consent' => true]);
+        $k = array_column(DB::all('SELECT kind FROM outbox WHERE shop_id = ? ORDER BY id', [$s]), 'kind'); ok(in_array('lembrete', $k, true), 'Solo agenda lembretes'); } finally { unset($GLOBALS['BF_NOW']); }
+    $p = DB::one('SELECT * FROM plans WHERE code = ?', ['basico']); eq((int)$p['max_messages_month'], 100); eq((int)$p['max_appointments_month'], 300);
+    // cota de agendamentos: no 300º já está cheio
+    set_now('2026-11-02 12:00:00');
+    try { DB::exec("REPLACE INTO usage_counters (shop_id, period, metric, cnt) VALUES (?, '2026-11', 'appointments', 300)", [$s]);
+        throws(fn() => book($s, [$sv], pro_of($s), '2026-11-05 11:00', 'Cli2', '11970002222'), 'plan_limit', 'cota mensal do Solo'); } finally { unset($GLOBALS['BF_NOW']); }
+    $u2 = mk_user('pro@x.com'); $s2 = mk_shop($u2, 'prop', 'profissional');
+    for ($i = 2; $i <= 5; $i++) Shops::createProfessional($s2, $u2, ['name' => "B$i", 'commission' => 30, 'active' => 1]);
+    throws(fn() => Shops::createProfessional($s2, $u2, ['name' => 'B6', 'active' => 1]), 'plan_limit', '6º barbeiro não cabe');
+    Shops::updateProfessional($s2, $u2, pro_of($s2), ['name' => 'Eu', 'commission' => 40, 'active' => 1]);
+    eq((float)DB::val('SELECT commission_percent FROM professionals WHERE id = ?', [pro_of($s2)]), 40.0);
+    $sv2 = mk_service($s2); set_now('2026-11-02 12:00:00');
+    try { DB::exec("REPLACE INTO usage_counters (shop_id, period, metric, cnt) VALUES (?, '2026-11', 'appointments', 5000)", [$s2]);
+        $b = book($s2, [$sv2], pro_of($s2), '2026-11-05 10:00', 'Cli3', '11970003333'); ok($b['appointment_id'] > 0, 'Profissional não tem limite mensal'); } finally { unset($GLOBALS['BF_NOW']); }
+});
+t('destaques dos planos batem com os números aplicados', function () {
+    foreach (require BF_ROOT . '/sql/plans.php' as $p) {
+        $txt = implode(' | ', $p[10]);
+        ok(str_contains($txt, $p[5] === 1 ? '1 profissional' : "Até {$p[5]} profissionais"), "{$p[1]}: profissionais");
+        ok($p[6] === null ? str_contains($txt, 'sem limite') : str_contains($txt, "Até {$p[6]} agendamentos"), "{$p[1]}: agendamentos");
+        ok($p[9] ? str_contains($txt, 'Comissões por profissional') && !str_contains($txt, 'Sem comissões') : str_contains($txt, 'Sem comissões'), "{$p[1]}: comissões");
+    }
+});
 done();
