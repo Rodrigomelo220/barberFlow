@@ -347,17 +347,36 @@ html[data-theme=dark] a:not(.btn):not(.nav-link):not(.brand):not(.tl-appt):not(.
 
 /* hambúrguer: só no celular */
 .burger{display:none}
-/* ======== CELULAR: cartões, menu inferior, nada cortado ======== */
+
 .bnav,.sheet,.sheet-bg,.agenda-cards{display:none}
-@media (max-width:767.98px){
-  body{padding-bottom:78px}
+/* menu hambúrguer: telas até 1279px (o menu de abas não cabe) */
+@media (max-width:1279.98px){
   .burger{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:transparent;color:#fff;font-size:1.5rem;cursor:pointer;flex:none}
   .burger:hover{background:rgba(255,255,255,.12)}
-  .sheet-shop{margin-top:4px}
   .tabs{display:none}
   .top .container-x>.nav-link,.top .container-x>form.inline{display:none}
   .top .container-x{flex-wrap:nowrap;gap:8px}
   .top .muted.small{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sheet-bg{display:block;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45)}
+  .sheet-bg[hidden],.sheet[hidden]{display:none}
+  .sheet{display:block;position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--bf-surface);border-radius:22px 22px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto;animation:sheetUp .22s ease-out}
+  .sheet-grip{width:44px;height:5px;border-radius:99px;background:var(--bf-line-strong);margin:0 auto 12px}
+  .sheet-shop{font-weight:700;margin:0 0 12px;text-align:center}
+  .sheet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .sheet-grid a,.sheet-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;padding:10px 6px;border:1px solid var(--bf-line);border-radius:16px;background:var(--bf-bg);color:var(--bf-ink);text-decoration:none;font:inherit;font-size:.8rem;font-weight:650;text-align:center;width:100%;cursor:pointer}
+  .sheet-grid i{font-size:1.5rem;color:var(--bf-accent-dark)}
+  .sheet-grid a[aria-current=page]{border-color:var(--bf-accent);background:var(--bf-accent-soft)}
+  .sheet-form{display:contents}
+  @keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  body.sheet-open{overflow:hidden}
+  body.sheet-open .top{z-index:90}
+  .sheet{left:50%;right:auto;width:min(560px,100%);transform:translateX(-50%);border-radius:22px;animation:none}
+}
+
+/* ======== CELULAR: cartões, menu inferior, nada cortado ======== */
+@media (max-width:767.98px){
+  body{padding-bottom:78px}
+  .sheet-shop{margin-top:4px}
   .page-head{flex-direction:column;align-items:stretch;gap:10px}.page-head .btn{width:100%}
   .btn,.form-control,.form-select{min-height:48px}
   .actions{flex-wrap:wrap}
@@ -373,19 +392,6 @@ html[data-theme=dark] a:not(.btn):not(.nav-link):not(.brand):not(.tl-appt):not(.
   .bnav i{font-size:1.3rem;line-height:1}
   .bnav a[aria-current=page],.bnav button.on{color:var(--bf-ink);background:var(--bf-accent-soft)}
   .bnav a[aria-current=page] i,.bnav button.on i{color:var(--bf-accent-dark)}
-  .sheet-bg{display:block;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45)}
-  .sheet-bg[hidden],.sheet[hidden]{display:none}
-  .sheet{display:block;position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--bf-surface);border-radius:22px 22px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto;animation:sheetUp .22s ease-out}
-  .sheet-grip{width:44px;height:5px;border-radius:99px;background:var(--bf-line-strong);margin:0 auto 12px}
-  .sheet-shop{font-weight:700;margin:0 0 12px;text-align:center}
-  .sheet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .sheet-grid a,.sheet-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;padding:10px 6px;border:1px solid var(--bf-line);border-radius:16px;background:var(--bf-bg);color:var(--bf-ink);text-decoration:none;font:inherit;font-size:.8rem;font-weight:650;text-align:center;width:100%;cursor:pointer}
-  .sheet-grid i{font-size:1.5rem;color:var(--bf-accent-dark)}
-  .sheet-grid a[aria-current=page]{border-color:var(--bf-accent);background:var(--bf-accent-soft)}
-  .sheet-form{display:contents}
-  @keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
-  body.sheet-open{overflow:hidden}
-  body.sheet-open .top{z-index:90}
 
   /* agenda: lista de cartões no lugar da linha do tempo */
   .agenda-cards{display:grid;gap:10px;margin-bottom:16px}
