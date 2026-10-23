@@ -371,4 +371,19 @@ t('administradores: promover conta existente, recusar inexistente, não remover 
     throws(fn() => Admin::revokeAdmin($b, $b), 'forbidden');
     ok((int)DB::val("SELECT COUNT(*) FROM audit_logs WHERE action IN ('admin.granted','admin.revoked')") >= 2, 'auditado');
 });
+t('tipos de negócio: cada tipo gera seus próprios serviços e clientes; tipo inválido vira barbearia', function () {
+    eq(Biz::normalize('xyz'), 'barbearia'); eq(Biz::normalize('salao'), 'salao'); ok(count(Biz::options()) >= 5);
+    foreach (['salao' => 'Escova', 'unhas' => 'Manicure', 'sobrancelha' => 'Design de sobrancelha', 'estetica' => 'Limpeza de pele'] as $type => $svcName) {
+        $u = mk_user("t$type@x.com"); $s = Shops::create($u, "Studio $type", "studio-$type", '', 'profissional', $type); activate($s, $u, 'profissional');
+        eq(DB::val('SELECT business_type FROM shops WHERE id = ?', [$s]), $type);
+        $r = Shops::seedDemo($s, $u); ok($r['appointments'] > 50, "$type: atendimentos");
+        ok((int)DB::val('SELECT COUNT(*) FROM services WHERE shop_id = ? AND name = ?', [$s, $svcName]) === 1, "$type: serviço $svcName");
+        eq((int)DB::val("SELECT COUNT(*) FROM services WHERE shop_id = ? AND name LIKE 'Corte degradê'", [$s]), 0, "$type: sem serviço de barbearia");
+        eq((int)DB::val("SELECT COUNT(*) FROM (SELECT a.id FROM appointments a JOIN appointments b ON a.professional_id = b.professional_id AND a.id < b.id AND a.status='confirmed' AND b.status='confirmed' AND a.starts_at < b.ends_at AND b.starts_at < a.ends_at WHERE a.shop_id = ?) x", [$s]), 0, "$type: sem sobreposição");
+    }
+    $u = mk_user('settype@x.com'); $s = mk_shop($u, 'settype');
+    $d = DB::one('SELECT * FROM shops WHERE id = ?', [$s]);
+    Shops::updateSettings($s, $u, ['name' => 'X Studio', 'business_type' => 'unhas', 'description' => '', 'phone' => '', 'address' => '', 'slot_grid_minutes' => 15, 'min_notice_minutes' => 60, 'max_days_ahead' => 30, 'allow_any_professional' => 1, 'allow_online_cancel' => 1, 'cancel_min_notice_minutes' => 120, 'reminders_enabled' => 1, 'reminder_hours' => '24,2']);
+    eq(DB::val('SELECT business_type FROM shops WHERE id = ?', [$s]), 'unhas');
+});
 done();

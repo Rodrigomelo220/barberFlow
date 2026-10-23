@@ -19,8 +19,9 @@
 </div>
 <?php endforeach; ?>
 <form method="post" action="<?= e(url('/painel/configuracoes')) ?>" class="card"><?= csrf_field() ?>
-  <h2>Barbearia</h2>
+  <h2>Dados do negócio</h2>
   <?= fld('name', 'Nome', old('name', $s['name']), ['required' => 1, 'maxlength' => 80]) ?>
+  <?= fld('business_type', 'Tipo de negócio', old('business_type', $s['business_type'] ?? 'barbearia'), ['type' => 'select', 'options' => Biz::options()]) ?>
   <?= fld('description', 'Descrição (página pública)', old('description', $s['description']), ['type' => 'textarea', 'rows' => 2, 'maxlength' => 500]) ?>
   <div class="grid g2"><?= fld('phone', 'Telefone / WhatsApp', old('phone', $s['phone'] ? Scheduling::formatPhone($s['phone']) : ''), ['type' => 'tel']) ?><?= fld('address', 'Endereço', old('address', $s['address']), ['maxlength' => 200]) ?></div>
   <p class="small muted">Endereço da página pública: <b><?= e(abs_url('/b/' . $s['slug'])) ?></b> (não pode ser alterado para não quebrar links já divulgados).</p>
@@ -40,7 +41,7 @@
 </form>
 <?php if (cfg('app.mode', 'demo') === 'demo' && Ctx::writable($ctx)): ?>
 <div class="card"><h2>Dados de exemplo</h2>
-  <p class="muted">Preenche esta barbearia com serviços, equipe, clientes fictícios e cerca de 5 semanas de atendimentos, pagamentos e despesas para você testar os gráficos, a agenda e o financeiro. Os atendimentos de exemplo só são criados se ainda não houver agendamentos; os serviços (cortes, barba etc.) são sempre completados.</p>
-  <?= post_form('/painel/configuracoes/exemplo', '<button class="btn btn-outline-dark">Preencher com dados de exemplo</button>', '', 'Criar dados fictícios nesta barbearia?') ?>
+  <p class="muted">Preenche este negócio com serviços, equipe, clientes fictícios e cerca de 5 semanas de atendimentos, pagamentos e despesas para você testar os gráficos, a agenda e o financeiro. Os atendimentos de exemplo só são criados se ainda não houver agendamentos; os serviços (cortes, barba etc.) são sempre completados.</p>
+  <?= post_form('/painel/configuracoes/exemplo', '<button class="btn btn-outline-dark">Preencher com dados de exemplo</button>', '', 'Criar dados fictícios neste negócio?') ?>
 </div>
 <?php endif; ?>

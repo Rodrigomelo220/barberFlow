@@ -1,0 +1,1 @@
+<script>/* tema: escolha salva > preferência do aparelho */(function(){try{var t=localStorage.getItem('bf-theme');if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-bs-theme',t);}catch(e){}})();</script>

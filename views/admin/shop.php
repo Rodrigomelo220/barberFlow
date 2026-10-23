@@ -1,5 +1,5 @@
 <?php $s = $d['shop']; $sub = $d['sub']; $susp = $s['status'] === 'suspended'; ?>
-<div class="page-head"><div><a class="small" href="<?= e(url('/admin/barbearias')) ?>">← Barbearias</a><h1 style="margin-top:4px"><?= e($s['name']) ?> <?= $susp ? badge('suspensa', 'red') : '' ?></h1></div></div>
+<div class="page-head"><div><a class="small" href="<?= e(url('/admin/barbearias')) ?>">← Negócios</a><h1 style="margin-top:4px"><?= e($s['name']) ?> <?= $susp ? badge('suspensa', 'red') : '' ?></h1></div></div>
 <div class="grid g2">
 <div class="card"><h2>Assinatura</h2>
   <?php if ($sub): ?><p>Plano <b><?= e($sub['plan_name']) ?></b> · <?= e(money((int)$sub['price_cents'])) ?>/mês · <?= e(SUB_STATUS[$sub['status']] ?? $sub['status']) ?></p>
@@ -12,7 +12,7 @@
   <hr class="sep"><h2><?= $susp ? 'Reativar' : 'Suspender' ?></h2>
   <form method="post" action="<?= e(url('/admin/barbearias/' . $s['id'] . ($susp ? '/reativar' : '/suspender'))) ?>" data-confirm="<?= $susp ? 'Reativar esta barbearia?' : 'Suspender esta barbearia? O acesso será bloqueado, sem apagar dados.' ?>"><?= csrf_field() ?>
     <?= fld('reason', 'Motivo (obrigatório, fica no registro)', '', ['required' => 1, 'minlength' => 5, 'maxlength' => 300]) ?>
-    <button class="btn <?= $susp ? 'btn-primary' : 'btn-danger' ?> btn-outline-dark"><?= $susp ? 'Reativar barbearia' : 'Suspender barbearia' ?></button></form>
+    <button class="btn <?= $susp ? 'btn-primary' : 'btn-danger' ?> btn-outline-dark"><?= $susp ? 'Reativar negócio' : 'Suspender negócio' ?></button></form>
 </div></div>
 <div class="grid g2">
 <div class="card"><h2>Notas internas</h2>

@@ -6,9 +6,9 @@
 <section class="hero">
   <div class="hero-grid">
     <div class="hero-copy">
-      <div class="eyebrow">Gestão inteligente para barbearias</div>
-      <h1>Sua barbearia organizada. <em>Seu tempo de volta.</em></h1>
-      <p class="lead">Agenda, clientes e financeiro em um só lugar. Deixe o cliente escolher o horário online e tenha mais controle da rotina da sua barbearia.</p>
+      <div class="eyebrow">Gestão para barbearias, salões e estúdios</div>
+      <h1>Seu negócio organizado. <em>Seu tempo de volta.</em></h1>
+      <p class="lead">Agenda, clientes e financeiro em um só lugar. Deixe o cliente escolher o horário online e tenha mais controle da rotina do seu negócio.</p>
       <div class="hero-actions">
         <a class="btn btn-danger" href="<?= e(url('/cadastro')) ?>">Começar agora <?= icon('arrow-up-right') ?></a>
         <a class="btn btn-outline-dark" href="#planos">Conhecer os planos</a>
@@ -18,7 +18,7 @@
     <div class="hero-visual" aria-label="Prévia ilustrativa da agenda online do BarberFlow" role="img">
       <div class="mock-window">
         <div class="mock-top">
-          <div class="mock-brand"><span class="mock-mark">B</span><span>Agenda da barbearia</span></div>
+          <div class="mock-brand"><span class="mock-mark">B</span><span>Sua agenda online</span></div>
           <span class="mock-pill"><span class="bi bi-circle-fill" style="font-size:.45rem" aria-hidden="true"></span> Online</span>
         </div>
         <div class="mock-heading">Escolha seu horário</div>
@@ -59,7 +59,7 @@
 <section id="planos" aria-labelledby="planos-titulo">
   <div class="section-heading">
     <div class="eyebrow">Planos simples</div>
-    <h2 id="planos-titulo">Escolha o tamanho certo para sua barbearia.</h2>
+    <h2 id="planos-titulo">Escolha o tamanho certo para o seu negócio.</h2>
     <p>Compare os recursos, comece com o plano que faz sentido para você e ajuste quando sua equipe crescer.</p>
   </div>
   <div class="grid g3">

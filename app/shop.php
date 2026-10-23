@@ -16,21 +16,21 @@ final class Shops
         return !in_array($slug, self::RESERVED, true) && DB::val('SELECT 1 FROM shops WHERE slug = ?', [$slug]) === null;
     }
 
-    public static function create(int $userId, string $name, string $slug, string $phone, string $planCode): int
+    public static function create(int $userId, string $name, string $slug, string $phone, string $planCode, string $businessType = Biz::DEFAULT): int
     {
         $name = trim($name); $slug = mb_strtolower(trim($slug));
-        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) throw new BusinessError('Informe o nome da barbearia.');
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) throw new BusinessError('Informe o nome do negócio.');
         if (!preg_match('/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/', $slug)) throw new BusinessError('Endereço: use de 3 a 50 letras minúsculas, números ou hífen.');
         if (in_array($slug, self::RESERVED, true)) throw new BusinessError('Este endereço não está disponível. Escolha outro.', 'slug_reserved');
         $phoneN = null;
         if (trim($phone) !== '') $phoneN = Scheduling::normalizePhone($phone);
         $plan = DB::one('SELECT * FROM plans WHERE code = ? AND is_active = 1', [$planCode]);
         if (!$plan) throw new BusinessError('Plano inválido.');
-        if ((int)DB::val('SELECT COUNT(*) FROM shop_members WHERE user_id = ? AND role = \'owner\'', [$userId]) >= 3) throw new BusinessError('Limite de 3 barbearias por conta.');
+        if ((int)DB::val('SELECT COUNT(*) FROM shop_members WHERE user_id = ? AND role = \'owner\'', [$userId]) >= 3) throw new BusinessError('Limite de 3 negócios por conta.');
         $user = DB::one('SELECT name FROM users WHERE id = ?', [$userId]);
         try {
-            return DB::tx(function () use ($userId, $name, $slug, $phoneN, $plan, $user) {
-                $sid = DB::insert('shops', ['slug' => $slug, 'name' => $name, 'phone' => $phoneN, 'created_at' => dt_db(now_utc())]);
+            return DB::tx(function () use ($userId, $name, $slug, $phoneN, $plan, $user, $businessType) {
+                $sid = DB::insert('shops', ['slug' => $slug, 'name' => $name, 'business_type' => Biz::normalize($businessType), 'phone' => $phoneN, 'created_at' => dt_db(now_utc())]);
                 DB::insert('shop_members', ['shop_id' => $sid, 'user_id' => $userId, 'role' => 'owner']);
                 $pid = DB::insert('professionals', ['shop_id' => $sid, 'user_id' => $userId, 'name' => $user['name']]);
                 self::setHours($sid, $pid, array_map(fn($d) => ['weekday' => $d, 'start' => '09:00', 'end' => '18:00'], [1, 2, 3, 4, 5, 6]));
@@ -277,7 +277,7 @@ final class Shops
     public static function updateSettings(int $shopId, int $userId, array $d): void
     {
         $name = trim((string)$d['name']);
-        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) throw new BusinessError('Informe o nome da barbearia.');
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) throw new BusinessError('Informe o nome do negócio.');
         $phone = trim((string)$d['phone']) === '' ? null : Scheduling::normalizePhone((string)$d['phone']);
         $hours = array_values(array_unique(array_filter(array_map('intval', preg_split('/[,\s;]+/', (string)$d['reminder_hours']) ?: []), fn($h) => $h >= 1 && $h <= 336)));
         if (count($hours) > 4) throw new BusinessError('No máximo 4 lembretes.');
@@ -285,8 +285,8 @@ final class Shops
         $grid = (int)$d['slot_grid_minutes']; $maxd = (int)$d['max_days_ahead'];
         if ($grid < 5 || $grid > 120) throw new BusinessError('Intervalo entre horários: de 5 a 120 minutos.');
         if ($maxd < 1 || $maxd > 365) throw new BusinessError('Agendar até: de 1 a 365 dias.');
-        DB::exec('UPDATE shops SET name=?, description=?, phone=?, address=?, slot_grid_minutes=?, min_notice_minutes=?, max_days_ahead=?, allow_any_professional=?, allow_online_cancel=?, cancel_min_notice_minutes=?, reminders_enabled=?, reminder_hours=? WHERE id=?',
-            [$name, mb_substr(trim((string)$d['description']), 0, 500), $phone, mb_substr(trim((string)$d['address']), 0, 200), $grid, max(0, (int)$d['min_notice_minutes']), $maxd,
+        DB::exec('UPDATE shops SET name=?, business_type=?, description=?, phone=?, address=?, slot_grid_minutes=?, min_notice_minutes=?, max_days_ahead=?, allow_any_professional=?, allow_online_cancel=?, cancel_min_notice_minutes=?, reminders_enabled=?, reminder_hours=? WHERE id=?',
+            [$name, Biz::normalize($d['business_type'] ?? null), mb_substr(trim((string)$d['description']), 0, 500), $phone, mb_substr(trim((string)$d['address']), 0, 200), $grid, max(0, (int)$d['min_notice_minutes']), $maxd,
                 !empty($d['allow_any_professional']) ? 1 : 0, !empty($d['allow_online_cancel']) ? 1 : 0, max(0, (int)$d['cancel_min_notice_minutes']), !empty($d['reminders_enabled']) ? 1 : 0, implode(',', $hours), $shopId]);
         audit($shopId, $userId, 'shop.settings_updated', 'shop', $shopId);
     }
@@ -362,7 +362,7 @@ final class Shops
     // ------------------------------------------------------- dados de exemplo (modo demo)
 
     /**
-     * Preenche uma barbearia VAZIA com dados fictícios para testar o painel: serviços, equipe, clientes,
+     * Preenche um negócio VAZIO com dados fictícios para testar o painel: serviços, equipe, clientes,
      * ~5 semanas de atendimentos (concluídos com pagamento registrado, faltas, cancelados), agenda dos próximos dias e despesas.
      * Nomes e telefones são inventados (telefones 11 99999-00xx). Se já houver atendimentos, só completa serviços/equipe (não gera atendimentos).
      * @return array{services:int,professionals:int,customers:int,appointments:int}
@@ -373,8 +373,8 @@ final class Shops
         $tz = new DateTimeZone($shop['timezone']); $utc = new DateTimeZone('UTC');
         $hasAppts = (int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$shopId]) > 0;
         mt_srand(20261022);
-        $svcDefs = [['Corte degradê', 45, 4500, 'Máquina e tesoura, acabamento na navalha'], ['Corte social', 40, 4000, 'Clássico, na tesoura ou máquina'], ['Corte navalhado', 50, 5000, 'Acabamento total na navalha'],
-            ['Corte infantil', 30, 3500, 'Até 10 anos'], ['Barba', 30, 3000, 'Barba com toalha quente'], ['Corte + barba', 70, 7000, 'Combo completo'], ['Sobrancelha', 15, 1500, ''], ['Pigmentação', 40, 5000, ''], ['Hidratação', 30, 3000, '']];
+        $bt = Biz::types()[Biz::normalize(DB::val('SELECT business_type FROM shops WHERE id = ?', [$shopId]))];
+        $svcDefs = $bt['services'];
         $have = array_map('mb_strtolower', array_column(DB::all('SELECT name FROM services WHERE shop_id = ?', [$shopId]), 'name'));
         $newServices = 0;
         foreach ($svcDefs as [$n, $dur, $price, $desc]) {
@@ -385,10 +385,10 @@ final class Shops
         $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
         $newPros = 0;
         $plan = Billing::state($shopId)['plan'] ?? null; $limit = $plan['max_professionals'] ?? null;
-        if (!$pros) { self::createProfessional($shopId, $userId, ['name' => 'Barbeiro', 'color' => '#b68a4b', 'commission' => 0, 'active' => 1]); $newPros++; }
+        if (!$pros) { self::createProfessional($shopId, $userId, ['name' => 'Profissional', 'color' => '#b68a4b', 'commission' => 0, 'active' => 1]); $newPros++; }
         // equipe de exemplo só se o plano permitir mais de um profissional
         if (!$hasAppts && ($limit === null || (int)$limit > 1)) {
-            foreach ([['Diego', '#335f78', 40], ['Marcos', '#247653', 35]] as [$n, $c, $cm]) {
+            foreach (array_map(null, $bt['team'], ['#335f78', '#247653'], [40, 35]) as [$n, $c, $cm]) {
                 $cnt = (int)DB::val('SELECT COUNT(*) FROM professionals WHERE shop_id = ? AND active = 1', [$shopId]);
                 if ($cnt >= 3 || ($limit !== null && $cnt >= (int)$limit)) break;
                 self::createProfessional($shopId, $userId, ['name' => $n, 'color' => $c, 'commission' => $cm, 'active' => 1]); $newPros++;
@@ -405,7 +405,7 @@ final class Shops
             }
         }
         if ($hasAppts) return ['services' => $newServices, 'professionals' => $newPros, 'customers' => 0, 'appointments' => 0];
-        $first = ['Carlos', 'João', 'Pedro', 'Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Bruno', 'Felipe', 'André', 'Thiago', 'Vinícius', 'Eduardo', 'Rodrigo', 'Leandro', 'Fábio', 'Gustavo', 'Henrique'];
+        $first = $bt['customers'];
         $last = ['Silva', 'Souza', 'Oliveira', 'Santos', 'Lima', 'Pereira', 'Costa', 'Ribeiro', 'Almeida', 'Carvalho', 'Gomes', 'Martins'];
         $cust = [];
         for ($i = 0; $i < 18; $i++) {

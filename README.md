@@ -1,6 +1,6 @@
 # BarberFlow (PHP + MySQL)
 
-Agenda online para barbearias, feita para rodar em hospedagem compartilhada (InfinityFree). PHP 8.0+, MySQL/MariaDB, sem Composer.
+Agenda online para barbearias, salões de beleza, design de sobrancelha, manicure/unhas e estética, feita para rodar em hospedagem compartilhada (InfinityFree). PHP 8.0+, MySQL/MariaDB, sem Composer.
 
 ## Instalar no InfinityFree
 1. No painel da InfinityFree, crie um banco MySQL (anote host, banco, usuário e senha).
@@ -10,6 +10,8 @@ Agenda online para barbearias, feita para rodar em hospedagem compartilhada (Inf
 5. Depois de instalar, apague `instalar.php`. As pastas `storage/` e `uploads/` precisam de permissão de escrita.
 
 ## O que está implementado
+- Tipo de negócio (barbearia, salão, sobrancelha, unhas, estética, outro) escolhido ao cadastrar e alterável em Configurações; muda os serviços/equipe do "dados de exemplo". As regras do sistema são as mesmas para todos.
+- Tema claro/escuro (botão no topo; lembra a escolha e segue o aparelho na primeira visita).
 - Página pública de agendamento (capa, logo, etapas, dias, horários), cancelar/remarcar por link secreto.
 - Reserva atômica (transação + travas): sem horário duplicado, testado com processos paralelos.
 - Painel: início com gráficos, agenda em linha do tempo, clientes, serviços, equipe, bloqueios, financeiro, despesas, mensagens, configurações.

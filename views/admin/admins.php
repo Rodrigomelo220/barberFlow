@@ -1,5 +1,5 @@
 <div class="page-head"><h1>Administradores</h1></div>
-<div class="alert alert-info">Administradores veem todas as barbearias e cobranças da plataforma. Para adicionar alguém, a pessoa precisa <b>já ter criado uma conta</b> (em /cadastro); depois informe o e-mail dela aqui.</div>
+<div class="alert alert-info">Administradores veem todos os negócios e cobranças da plataforma. Para adicionar alguém, a pessoa precisa <b>já ter criado uma conta</b> (em /cadastro); depois informe o e-mail dela aqui.</div>
 <form method="post" action="<?= e(url('/admin/administradores')) ?>" class="card"><?= csrf_field() ?><h2>Adicionar administrador</h2>
   <?= fld('email', 'E-mail da conta', old('email'), ['type' => 'email', 'required' => 1]) ?>
   <button class="btn btn-primary">Adicionar</button></form>

@@ -3,7 +3,7 @@
     'slotsUrl' => url('/api/slots'), 'bookUrl' => url('/api/book')], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>
 <?php require BF_ROOT . '/views/_shop_hero.php'; ?>
 <?php if (!$services): ?>
-  <div class="card empty">Esta barbearia ainda não publicou serviços para agendamento online.</div>
+  <div class="card empty">Este estabelecimento ainda não publicou serviços para agendamento online.</div>
 <?php else: ?>
 <ol class="steps" aria-label="Etapas do agendamento"><li class="on"><b>1</b><span>Serviço</span></li><li><b>2</b><span>Horário</span></li><li><b>3</b><span>Seus dados</span></li><li><b>4</b><span>Pronto</span></li></ol>
 <div id="app" aria-live="polite">
@@ -25,7 +25,7 @@
     <div class="field"><label for="name">Nome</label><input class="form-control" id="name" autocomplete="name" maxlength="120"></div>
     <div class="field"><label for="phone">WhatsApp / telefone</label><input class="form-control" id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 91234-5678"></div>
     <div class="field"><label for="notes">Observação (opcional)</label><textarea class="form-control" id="notes" rows="2" maxlength="500"></textarea></div>
-    <div class="field check"><label><input type="checkbox" id="consent_terms"> Autorizo a barbearia a usar meu nome e telefone para este agendamento. <a href="<?= e(url('/privacidade')) ?>" target="_blank" rel="noopener">Privacidade</a></label></div>
+    <div class="field check"><label><input type="checkbox" id="consent_terms"> Autorizo o estabelecimento a usar meu nome e telefone para este agendamento. <a href="<?= e(url('/privacidade')) ?>" target="_blank" rel="noopener">Privacidade</a></label></div>
     <div class="field check"><label><input type="checkbox" id="consent_wa"> Quero receber confirmação e lembretes por WhatsApp (opcional)</label></div>
     <div id="err" class="alert alert-danger hide" role="alert"></div>
     <div class="actions"><button type="button" class="btn btn-outline-dark" id="back2">Voltar</button><button type="button" class="btn btn-danger" id="send">Confirmar agendamento</button></div>

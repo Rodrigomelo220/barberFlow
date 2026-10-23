@@ -23,6 +23,6 @@
   </div>
   <script src="<?= e(url('/assets/slots.js')) ?>"></script>
   <?php else: ?>
-  <div class="alert alert-info">Para cancelar ou remarcar, fale com a barbearia<?= $shop['phone'] ? ' pelo ' . e(Scheduling::formatPhone($shop['phone'])) : '' ?>.</div>
+  <div class="alert alert-info">Para cancelar ou remarcar, fale com o estabelecimento<?= $shop['phone'] ? ' pelo ' . e(Scheduling::formatPhone($shop['phone'])) : '' ?>.</div>
   <?php endif; ?>
 <?php endif; ?>

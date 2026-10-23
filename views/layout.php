@@ -7,7 +7,7 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
     return '<a class="nav-link" href="' . e(url($href)) . '"' . ($on ? ' aria-current="page"' : '') . '>' . ($ic ? icon($ic) . ' ' : '') . e($label) . '</a>';
 };
 ?><!doctype html>
-<html lang="pt-BR"><head>
+<html lang="pt-BR"><head><?php require BF_ROOT . '/views/_theme_head.php'; ?>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e(($title ?? 'BarberFlow') . ($panel ? ' — ' . $ctx['shop']['name'] : ' — BarberFlow')) ?></title>
 <meta name="theme-color" content="#202522">
@@ -19,9 +19,10 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <header class="top"><div class="container-x">
   <a class="brand" href="<?= e(url($panel ? '/painel' : '/')) ?>"><i></i>BarberFlow</a>
   <span class="grow"></span>
+  <?php require BF_ROOT . '/views/_theme_btn.php'; ?>
   <?php if ($panel): ?>
     <?php if (count($ctx['memberships']) > 1): ?>
-      <?= post_form('/painel/trocar', '<select class="form-select" name="shop_id" aria-label="Barbearia" onchange="this.form.submit()" style="min-height:36px;width:auto">' . implode('', array_map(fn($m) => '<option value="' . (int)$m['id'] . '"' . ((int)$m['id'] === $ctx['shop_id'] ? ' selected' : '') . '>' . e($m['name']) . '</option>', $ctx['memberships'])) . '</select><noscript><button class="btn btn-sm btn-outline-dark">Trocar</button></noscript>', 'inline') ?>
+      <?= post_form('/painel/trocar', '<select class="form-select" name="shop_id" aria-label="Negócio" onchange="this.form.submit()" style="min-height:36px;width:auto">' . implode('', array_map(fn($m) => '<option value="' . (int)$m['id'] . '"' . ((int)$m['id'] === $ctx['shop_id'] ? ' selected' : '') . '>' . e($m['name']) . '</option>', $ctx['memberships'])) . '</select><noscript><button class="btn btn-sm btn-outline-dark">Trocar</button></noscript>', 'inline') ?>
     <?php else: ?><span class="muted small"><?= e($ctx['shop']['name']) ?></span><?php endif; ?>
     <a class="nav-link" href="<?= e(url('/b/' . $ctx['shop']['slug'])) ?>" target="_blank" rel="noopener"><?= icon('box-arrow-up-right') ?> Página pública</a>
     <?= post_form('/sair', '<button class="linklike">Sair</button>', 'inline') ?>

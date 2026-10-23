@@ -357,7 +357,7 @@ function register_panel_routes(Router $r): void
     $r->post('/painel/configuracoes', function () {
         $ctx = panel();
         pact($ctx, 'settings.manage', '/painel/configuracoes', function () use ($ctx) {
-            Shops::updateSettings($ctx['shop_id'], (int)$ctx['user']['id'], ['name' => input('name'), 'description' => input('description'), 'phone' => input('phone'), 'address' => input('address'),
+            Shops::updateSettings($ctx['shop_id'], (int)$ctx['user']['id'], ['name' => input('name'), 'business_type' => input('business_type'), 'description' => input('description'), 'phone' => input('phone'), 'address' => input('address'),
                 'slot_grid_minutes' => input_int('slot_grid_minutes', 15), 'min_notice_minutes' => input_int('min_notice_minutes', 60), 'max_days_ahead' => input_int('max_days_ahead', 30),
                 'allow_any_professional' => input_bool('allow_any_professional'), 'allow_online_cancel' => input_bool('allow_online_cancel'), 'cancel_min_notice_minutes' => input_int('cancel_min_notice_minutes', 120),
                 'reminders_enabled' => input_bool('reminders_enabled'), 'reminder_hours' => input('reminder_hours', '24,2')]);
@@ -380,7 +380,7 @@ function register_panel_routes(Router $r): void
         pact($ctx, 'settings.manage', '/painel/configuracoes', function () use ($ctx) {
             if (cfg('app.mode', 'demo') !== 'demo') throw new BusinessError('Dados de exemplo só existem no modo de demonstração.', 'forbidden', 403);
             $r = Shops::seedDemo($ctx['shop_id'], (int)$ctx['user']['id']);
-            return [$r['appointments'] ? 'Dados de exemplo criados: ' . $r['appointments'] . ' atendimentos, ' . $r['customers'] . ' clientes fictícios e ' . $r['services'] . ' serviços novos.' : 'Esta barbearia já tem atendimentos, então não criei novos. Serviços adicionados: ' . $r['services'] . '.', '/painel'];
+            return [$r['appointments'] ? 'Dados de exemplo criados: ' . $r['appointments'] . ' atendimentos, ' . $r['customers'] . ' clientes fictícios e ' . $r['services'] . ' serviços novos.' : 'Este negócio já tem atendimentos, então não criei novos. Serviços adicionados: ' . $r['services'] . '.', '/painel'];
         });
     });
 

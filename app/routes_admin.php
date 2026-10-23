@@ -18,18 +18,18 @@ function register_admin_routes(Router $r): void
     });
     $r->get('/admin/barbearias', function () {
         $u = admin_user();
-        render('admin/shops', ['u' => $u, 'rows' => Admin::shops(input('q'), input('status')), 'q' => input('q'), 'status' => input('status'), 'title' => 'Barbearias'], 'layout_admin');
+        render('admin/shops', ['u' => $u, 'rows' => Admin::shops(input('q'), input('status')), 'q' => input('q'), 'status' => input('status'), 'title' => 'Negócios'], 'layout_admin');
     });
     $r->get('/admin/barbearias/{id}', function ($id) {
         $u = admin_user();
-        $d = Admin::shopDetail((int)$id) ?? render_error(404, 'Barbearia não encontrada', 'Volte à lista.');
+        $d = Admin::shopDetail((int)$id) ?? render_error(404, 'Negócio não encontrado', 'Volte à lista.');
         render('admin/shop', ['u' => $u, 'd' => $d, 'title' => $d['shop']['name']], 'layout_admin');
     });
     $r->post('/admin/barbearias/{id}/{acao}', function ($id, $acao) {
         $u = admin_user();
         aact($u, '/admin/barbearias/' . (int)$id, function ($u) use ($id, $acao) {
-            if ($acao === 'suspender') { Admin::suspend((int)$u['id'], (int)$id, input('reason')); return 'Barbearia suspensa.'; }
-            if ($acao === 'reativar') { Admin::reactivate((int)$u['id'], (int)$id, input('reason')); return 'Barbearia reativada.'; }
+            if ($acao === 'suspender') { Admin::suspend((int)$u['id'], (int)$id, input('reason')); return 'Negócio suspenso.'; }
+            if ($acao === 'reativar') { Admin::reactivate((int)$u['id'], (int)$id, input('reason')); return 'Negócio reativado.'; }
             if ($acao === 'nota') { Admin::addNote((int)$u['id'], (int)$id, input('note')); return 'Nota salva.'; }
             throw new BusinessError('Ação inválida.');
         });

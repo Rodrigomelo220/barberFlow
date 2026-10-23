@@ -29,7 +29,7 @@ await owner.waitForURL('**/nova-barbearia**');
 await owner.fill('#f_name', 'Barbearia do Zé'); await owner.fill('#f_slug', slug); await owner.fill('#f_phone', '(11) 98888-7777');
 await owner.check('input[value="profissional"]');
 await shot(owner, 'nova-barbearia');
-await owner.click('button:has-text("Criar barbearia")');
+await owner.click('button:has-text("Criar negócio")');
 await owner.waitForURL('**/painel/assinatura');
 ok(await owner.locator('text=Aguardando pagamento').first().isVisible(), 'assinatura começa aguardando pagamento');
 await shot(owner, 'assinatura');
@@ -49,6 +49,15 @@ await owner.goto(BASE + '/painel/equipe');
 await owner.click('a:has-text("Zé da Navalha")');
 await shot(owner, 'profissional');
 await owner.locator('form[action$="/servicos"] button').click();
+
+// tema escuro: alterna, persiste ao recarregar
+await owner.click('#themeBtn');
+ok(await owner.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark', 'botão ativa o tema escuro');
+await owner.reload();
+ok(await owner.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark', 'tema escuro persiste após recarregar');
+await shot(owner, 'tema-escuro');
+await owner.click('#themeBtn');
+ok(await owner.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'light', 'botão volta ao tema claro');
 
 // logo e capa enviados pela própria barbearia (imagens geradas no teste, sem foto de terceiros)
 await owner.goto(BASE + '/painel/configuracoes');

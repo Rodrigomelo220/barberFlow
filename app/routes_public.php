@@ -32,7 +32,7 @@ function api_csrf(): void
 function public_shop(string $slug): array
 {
     $shop = DB::one('SELECT * FROM shops WHERE slug = ?', [mb_strtolower($slug)]);
-    if (!$shop) render_error(404, 'Barbearia não encontrada', 'Confira o endereço do link.');
+    if (!$shop) render_error(404, 'Estabelecimento não encontrado', 'Confira o endereço do link.');
     return $shop;
 }
 
@@ -44,7 +44,7 @@ function after_login_path(array $user): string
 function register_public_routes(Router $r): void
 {
     $r->get('/', function () {
-        render('landing', ['plans' => Billing::publicPlans(), 'user' => Auth::user(), 'title' => 'Agenda online para barbearias']);
+        render('landing', ['plans' => Billing::publicPlans(), 'user' => Auth::user(), 'title' => 'Agenda online para barbearias, salões e estúdios']);
     });
     $r->get('/termos', fn() => render('terms', ['title' => 'Termos de uso']));
     $r->get('/privacidade', fn() => render('privacy', ['title' => 'Privacidade e LGPD']));
@@ -107,16 +107,16 @@ function register_public_routes(Router $r): void
     // ------------------------------------------------------------ criar barbearia
     $r->get('/nova-barbearia', function () {
         $u = Auth::user() ?: redirect('/entrar?next=' . rawurlencode('/nova-barbearia'));
-        render('shop_new', ['title' => 'Nova barbearia', 'plans' => Billing::publicPlans(), 'plan' => input('plano'), 'user' => $u]);
+        render('shop_new', ['title' => 'Novo negócio', 'plans' => Billing::publicPlans(), 'plan' => input('plano'), 'user' => $u]);
     });
     $r->post('/nova-barbearia', function () {
         $u = Auth::user() ?: redirect('/entrar');
         act('/nova-barbearia', function () use ($u) {
             $name = input('name');
             $slug = input('slug') !== '' ? input('slug') : Shops::slugify($name);
-            $sid = Shops::create((int)$u['id'], $name, $slug, input('phone'), input('plan'));
+            $sid = Shops::create((int)$u['id'], $name, $slug, input('phone'), input('plan'), input('business_type'));
             $_SESSION['shop_id'] = $sid;
-            return ['Barbearia criada. Falta escolher como começar.', '/painel/assinatura'];
+            return ['Negócio criado. Falta escolher como começar.', '/painel/assinatura'];
         });
     });
 
@@ -149,9 +149,9 @@ function register_public_routes(Router $r): void
         $in = json_decode((string)file_get_contents('php://input'), true);
         if (!is_array($in)) json_out(['error' => 'bad_request', 'message' => 'Requisição inválida.'], 400);
         $shop = DB::one('SELECT * FROM shops WHERE slug = ?', [mb_strtolower((string)($in['shop'] ?? ''))]);
-        if (!$shop) json_out(['error' => 'not_found', 'message' => 'Barbearia não encontrada.'], 404);
+        if (!$shop) json_out(['error' => 'not_found', 'message' => 'Estabelecimento não encontrado.'], 404);
         $st = Billing::state((int)$shop['id']);
-        if ($st['access']['level'] !== 'full') json_out(['error' => 'unavailable', 'message' => 'Esta barbearia não está recebendo agendamentos online agora.'], 409);
+        if ($st['access']['level'] !== 'full') json_out(['error' => 'unavailable', 'message' => 'Este estabelecimento não está recebendo agendamentos online agora.'], 409);
         try {
             if (empty($in['consent_terms'])) throw new BusinessError('Para agendar, aceite o uso dos seus dados para este agendamento.');
             $b = Scheduling::book(['shop_id' => (int)$shop['id'], 'service_ids' => array_map('intval', (array)($in['services'] ?? [])), 'professional_id' => ($in['pro'] ?? 'any') === 'any' ? 'any' : (int)$in['pro'],
@@ -182,7 +182,7 @@ function register_public_routes(Router $r): void
     $r->get('/api/slots-token', function () use ($loadByToken) {
         $a = $loadByToken(input('token'));
         $ids = array_values(array_filter(array_map(fn($s) => $s['service_id'], $a['services'])));
-        if (count($ids) !== count($a['services'])) json_out(['slots' => [], 'message' => 'Um serviço foi removido. Fale com a barbearia.']);
+        if (count($ids) !== count($a['services'])) json_out(['slots' => [], 'message' => 'Um serviço foi removido. Fale com o estabelecimento.']);
         try { json_out(['slots' => Scheduling::slots((int)$a['shop_id'], $ids, (int)$a['professional_id'], input('date'), false, (int)$a['id'])]); }
         catch (BusinessError $e) { json_out(['slots' => [], 'message' => $e->getMessage()]); }
     });

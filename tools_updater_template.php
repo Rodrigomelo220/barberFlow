@@ -38,6 +38,7 @@ try {
     $pdo = new PDO("mysql:host={$d['host']};port=" . ($d['port'] ?? 3306) . ";dbname={$d['name']};charset=utf8mb4", $d['user'], $d['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $has = fn(string $t, string $col) => (int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t) . " AND COLUMN_NAME = " . $pdo->quote($col))->fetchColumn() > 0;
     foreach (['logo_path', 'cover_path'] as $col) if (!$has('shops', $col)) { $pdo->exec("ALTER TABLE shops ADD $col VARCHAR(120) NULL"); $log[] = "Banco: coluna shops.$col criada."; }
+    if (!$has('shops', 'business_type')) { $pdo->exec("ALTER TABLE shops ADD business_type VARCHAR(20) NOT NULL DEFAULT 'barbearia'"); $log[] = 'Banco: coluna shops.business_type criada.'; }
     // ---- planos oficiais (dois planos). Não apaga nada: o plano antigo "equipe" só é desativado.
     $plans = require $root . '/sql/plans.php'; $codes = [];
     foreach ($plans as $p) {

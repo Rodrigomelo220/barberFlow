@@ -1,7 +1,7 @@
 <?php $s = $m['subs']; $r = $m['rec']; $g = $m['growth']; $h = $m['health']; ?>
 <div class="page-head"><h1>Visão geral</h1></div>
 <div class="grid g4" style="margin-bottom:16px">
-  <div class="stat"><b><?= (int)$g['shops'] ?></b><span>barbearias (<?= (int)$g['new_shops'] ?> nos últimos 30 dias)</span></div>
+  <div class="stat"><b><?= (int)$g['shops'] ?></b><span>negócios (<?= (int)$g['new_shops'] ?> nos últimos 30 dias)</span></div>
   <div class="stat"><b><?= (int)$s['active'] ?></b><span>assinaturas ativas</span></div>
   <div class="stat"><b><?= (int)$s['trialing'] ?></b><span>em teste</span></div>
   <div class="stat"><b><?= (int)$s['past_due'] + (int)$s['suspended'] ?></b><span>em atraso ou suspensas</span></div>

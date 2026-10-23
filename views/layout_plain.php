@@ -1,4 +1,4 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<html lang="pt-BR"><head><?php require BF_ROOT . '/views/_theme_head.php'; ?><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title><?= e($title ?? 'BarberFlow') ?></title><link rel="icon" href="data:,"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/style.css')) ?>"></head>
-<body><div class="rail"></div><header class="top"><div class="container-x"><a class="brand" href="<?= e(url('/')) ?>"><i></i>BarberFlow</a></div></header><main><div class="container-x mid"><?= $content ?></div></main></body></html>
+<body><div class="rail"></div><header class="top"><div class="container-x"><a class="brand" href="<?= e(url('/')) ?>"><i></i>BarberFlow</a><span class="grow"></span><?php require BF_ROOT . '/views/_theme_btn.php'; ?></div></header><main><div class="container-x mid"><?= $content ?></div></main></body></html>

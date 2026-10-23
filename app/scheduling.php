@@ -25,7 +25,7 @@ final class Scheduling
     public static function shop(int $shopId): array
     {
         $s = DB::one('SELECT * FROM shops WHERE id = ?', [$shopId]);
-        if (!$s) throw new BusinessError('Barbearia não encontrada.', 'not_found', 404);
+        if (!$s) throw new BusinessError('Estabelecimento não encontrado.', 'not_found', 404);
         return $s;
     }
 
@@ -231,7 +231,7 @@ final class Scheduling
         $period = $now->setTimezone(self::tzObj($shop))->format('Y-m');
         $row = DB::one("SELECT cnt FROM usage_counters WHERE shop_id = ? AND period = ? AND metric = 'appointments' FOR UPDATE", [$shopId, $period]);
         $cnt = (int)($row['cnt'] ?? 0);
-        if ($limit !== null && $cnt >= (int)$limit) throw new BusinessError('Esta barbearia atingiu o limite de agendamentos do plano neste mês.', 'plan_limit', 409);
+        if ($limit !== null && $cnt >= (int)$limit) throw new BusinessError('Este estabelecimento atingiu o limite de agendamentos do plano neste mês.', 'plan_limit', 409);
         if ($row) DB::exec("UPDATE usage_counters SET cnt = cnt + 1 WHERE shop_id = ? AND period = ? AND metric = 'appointments'", [$shopId, $period]);
         else DB::insert('usage_counters', ['shop_id' => $shopId, 'period' => $period, 'metric' => 'appointments', 'cnt' => 1]);
     }
@@ -245,9 +245,9 @@ final class Scheduling
 
     private static function assertCustomerMayChange(array $shop, array $a, DateTimeImmutable $now): void
     {
-        if (!(int)$shop['allow_online_cancel']) throw new BusinessError('Esta barbearia não permite alterações online. Fale com ela pelo telefone.', 'policy_no_online_change');
+        if (!(int)$shop['allow_online_cancel']) throw new BusinessError('Este estabelecimento não permite alterações online. Fale com ele pelo telefone.', 'policy_no_online_change');
         $min = (dt_from_db($a['starts_at'])->getTimestamp() - $now->getTimestamp()) / 60;
-        if ($min < (int)$shop['cancel_min_notice_minutes']) throw new BusinessError('Alterações online só até ' . (int)$shop['cancel_min_notice_minutes'] . ' minutos antes do horário. Fale com a barbearia.', 'policy_too_late');
+        if ($min < (int)$shop['cancel_min_notice_minutes']) throw new BusinessError('Alterações online só até ' . (int)$shop['cancel_min_notice_minutes'] . ' minutos antes do horário. Fale com o estabelecimento.', 'policy_too_late');
     }
 
     /** $actor: 'customer' (segue a política da barbearia) ou 'staff'. */
@@ -276,7 +276,7 @@ final class Scheduling
             if ($actor === 'customer') self::assertCustomerMayChange($shop, $a, $now);
             DB::one('SELECT id FROM professionals WHERE id = ? FOR UPDATE', [$a['professional_id']]);
             $svc = DB::all('SELECT service_id FROM appointment_services WHERE appointment_id = ? ORDER BY position', [$apptId]);
-            foreach ($svc as $s) if ($s['service_id'] === null) throw new BusinessError('Um serviço deste agendamento foi removido. Fale com a barbearia.', 'service_removed');
+            foreach ($svc as $s) if ($s['service_id'] === null) throw new BusinessError('Um serviço deste agendamento foi removido. Fale com o estabelecimento.', 'service_removed');
             $specs = self::specs($shopId, array_column($svc, 'service_id'), false);
             $newStart = $newStart->setTimezone(new DateTimeZone('UTC'));
             if ($newStart <= $now) throw new BusinessError('Esse horário já passou.', 'in_the_past');

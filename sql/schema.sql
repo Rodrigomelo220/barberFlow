@@ -34,6 +34,7 @@ CREATE TABLE shops (
   slug VARCHAR(50) NOT NULL,
   name VARCHAR(80) NOT NULL,
   description VARCHAR(500) NOT NULL DEFAULT '',
+  business_type VARCHAR(20) NOT NULL DEFAULT 'barbearia',
   logo_path VARCHAR(120) NULL,
   cover_path VARCHAR(120) NULL,
   phone VARCHAR(30) NULL,

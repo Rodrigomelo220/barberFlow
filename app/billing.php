@@ -70,7 +70,7 @@ final class Billing
     {
         return DB::tx(function () use ($shopId, $userId, $planCode, $withTrial) {
             $sub = DB::one('SELECT * FROM subscriptions WHERE shop_id = ? FOR UPDATE', [$shopId]);
-            if (!$sub) throw new BusinessError('Barbearia sem assinatura base.');
+            if (!$sub) throw new BusinessError('Negócio sem assinatura base.');
             if (in_array($sub['status'], ['active', 'past_due'], true)) throw new BusinessError('Já existe uma assinatura em andamento. Use trocar de plano.', 'already_subscribed');
             $plan = DB::one('SELECT * FROM plans WHERE code = ? AND is_active = 1', [$planCode]);
             if (!$plan) throw new BusinessError('Plano inválido.');

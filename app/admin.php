@@ -53,13 +53,13 @@ final class Admin
     public static function suspend(int $adminId, int $shopId, string $reason): void
     {
         $r = self::reason($reason);
-        if (!DB::exec("UPDATE shops SET status = 'suspended' WHERE id = ?", [$shopId])) throw new BusinessError('Barbearia não encontrada.', 'not_found', 404);
+        if (!DB::exec("UPDATE shops SET status = 'suspended' WHERE id = ?", [$shopId])) throw new BusinessError('Negócio não encontrado.', 'not_found', 404);
         audit($shopId, $adminId, 'admin.shop_suspended', 'shop', $shopId, $r, 'platform_admin');
     }
     public static function reactivate(int $adminId, int $shopId, string $reason): void
     {
         $r = self::reason($reason);
-        if (!DB::exec("UPDATE shops SET status = 'active' WHERE id = ?", [$shopId])) throw new BusinessError('Barbearia não encontrada.', 'not_found', 404);
+        if (!DB::exec("UPDATE shops SET status = 'active' WHERE id = ?", [$shopId])) throw new BusinessError('Negócio não encontrado.', 'not_found', 404);
         audit($shopId, $adminId, 'admin.shop_reactivated', 'shop', $shopId, $r, 'platform_admin');
     }
     public static function addNote(int $adminId, int $shopId, string $note): void

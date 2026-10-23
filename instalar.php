@@ -91,7 +91,7 @@ label{display:block;font-weight:600;margin:12px 0 4px} input{width:100%;box-sizi
   <div class="card"><b class="ok">Instalado com sucesso.</b>
   <ol><li><b>Apague agora o arquivo <code>instalar.php</code></b> (pelo Gerenciador de Arquivos ou FTP).</li>
   <li>Entre em <a href="entrar">/entrar</a> com o e-mail e a senha do administrador (painel em <code>/admin</code>).</li>
-  <li>Para testar como barbearia, crie outra conta em <a href="cadastro">/cadastro</a>.</li></ol>
+  <li>Para testar como negócio, crie outra conta em <a href="cadastro">/cadastro</a>.</li></ol>
   <p class="hint">Pagamento e WhatsApp são <b>simulados</b> nesta versão. Leia o README.</p></div>
 <?php else: ?>
   <div class="card"><b>Requisitos</b><ul style="padding-left:18px;margin:6px 0">
