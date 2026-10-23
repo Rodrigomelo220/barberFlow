@@ -26,4 +26,4 @@
   <?= fld('whatsapp_consent', 'O cliente autorizou receber mensagens por WhatsApp', old('whatsapp_consent'), ['type' => 'checkbox']) ?>
   <button class="btn btn-primary">Agendar</button>
 </form>
-<script src="<?= e(url('/assets/slots.js')) ?>"></script>
+<script src="<?= e(asset('/assets/slots.js')) ?>"></script>

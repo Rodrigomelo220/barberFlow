@@ -12,7 +12,7 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <title><?= e(($title ?? 'BarberFlow') . ($panel ? ' — ' . $ctx['shop']['name'] : ' — BarberFlow')) ?></title>
 <meta name="theme-color" content="#202522">
 <?php if ($panel || ($noindex ?? false)): ?><meta name="robots" content="noindex"><?php endif; ?>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23202522'/%3E%3Cpath d='M10 10h20v5H15v5h12v5H15v5h15v5H10z' fill='%23d7b77e'/%3E%3C/svg%3E"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/style.css')) ?>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23202522'/%3E%3Cpath d='M10 10h20v5H15v5h12v5H15v5h15v5H10z' fill='%23d7b77e'/%3E%3C/svg%3E"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(asset('/assets/style.css')) ?>">
 </head><body>
 <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <div class="rail"></div>
@@ -79,5 +79,5 @@ $moreOn = (bool)array_filter($more, fn($i) => $isOn($i[0]));
   <?php if (cfg('app.mode', 'demo') === 'demo'): ?><p><b>Versão de demonstração.</b> Cobrança e mensagens de WhatsApp são simuladas: nada é cobrado nem enviado de verdade.</p><?php endif; ?>
   <a href="<?= e(url('/termos')) ?>">Termos</a> · <a href="<?= e(url('/privacidade')) ?>">Privacidade e LGPD</a>
 </div></footer>
-<script src="<?= e(url('/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script><script src="<?= e(url('/assets/app.js')) ?>"></script>
+<script src="<?= e(url('/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script><script src="<?= e(asset('/assets/app.js')) ?>"></script>
 </body></html>

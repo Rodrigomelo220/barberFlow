@@ -71,5 +71,5 @@ $canEdit = Ctx::can($ctx, 'agenda.manage_own') && Ctx::writable($ctx);
   <form method="post" action="<?= e(url('/painel/agendamentos/' . $a['id'] . '/cancelar')) ?>" data-confirm="Cancelar este agendamento?"><?= csrf_field() ?>
     <?= fld('reason', 'Motivo (opcional)', '', ['maxlength' => 200]) ?><button class="btn btn-outline-danger">Cancelar agendamento</button></form></div>
 </div>
-<script src="<?= e(url('/assets/slots.js')) ?>"></script>
+<script src="<?= e(asset('/assets/slots.js')) ?>"></script>
 <?php endif; ?>

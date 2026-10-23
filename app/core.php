@@ -128,6 +128,8 @@ function base_path(): string
     return $b;
 }
 function url(string $path = '/'): string { return base_path() . $path; }
+/** URL de arquivo estático com versão (data de modificação): o navegador nunca reaproveita CSS/JS antigo após uma atualização. */
+function asset(string $path): string { $f = BF_ROOT . $path; $v = is_file($f) ? (string)filemtime($f) : '1'; return url($path) . '?v=' . $v; }
 /** HTTPS direto ou atrás de proxy/CDN (hospedagens compartilhadas). Em domínio público sem sinal nenhum, assume https; só localhost/IP ficam em http. */
 function is_https(bool $assumePublic = true): bool
 {

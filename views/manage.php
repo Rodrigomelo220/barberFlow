@@ -21,7 +21,7 @@
     <?= post_form('/agendamento/' . $token . '/cancelar', '<button class="btn btn-outline-danger">Cancelar agendamento</button>', '', 'Cancelar este agendamento?') ?>
     <p class="hint">Alterações online são aceitas até <?= (int)$shop['cancel_min_notice_minutes'] ?> minutos antes do horário.</p>
   </div>
-  <script src="<?= e(url('/assets/slots.js')) ?>"></script>
+  <script src="<?= e(asset('/assets/slots.js')) ?>"></script>
   <?php else: ?>
   <div class="alert alert-info">Para cancelar ou remarcar, fale com o estabelecimento<?= $shop['phone'] ? ' pelo ' . e(Scheduling::formatPhone($shop['phone'])) : '' ?>.</div>
   <?php endif; ?>

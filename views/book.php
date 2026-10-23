@@ -41,5 +41,5 @@
   </section>
 </div>
 <script type="application/json" id="cfg"><?= $cfgJson ?></script>
-<script src="<?= e(url('/assets/book.js')) ?>"></script>
+<script src="<?= e(asset('/assets/book.js')) ?>"></script>
 <?php endif; ?>
