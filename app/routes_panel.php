@@ -380,7 +380,7 @@ function register_panel_routes(Router $r): void
         pact($ctx, 'settings.manage', '/painel/configuracoes', function () use ($ctx) {
             if (cfg('app.mode', 'demo') !== 'demo') throw new BusinessError('Dados de exemplo só existem no modo de demonstração.', 'forbidden', 403);
             $r = Shops::seedDemo($ctx['shop_id'], (int)$ctx['user']['id']);
-            return ['Dados de exemplo criados: ' . $r['appointments'] . ' atendimentos e ' . $r['customers'] . ' clientes fictícios.', '/painel'];
+            return [$r['appointments'] ? 'Dados de exemplo criados: ' . $r['appointments'] . ' atendimentos, ' . $r['customers'] . ' clientes fictícios e ' . $r['services'] . ' serviços novos.' : 'Esta barbearia já tem atendimentos, então não criei novos. Serviços adicionados: ' . $r['services'] . '.', '/painel'];
         });
     });
 

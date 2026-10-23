@@ -38,6 +38,23 @@ try {
     $pdo = new PDO("mysql:host={$d['host']};port=" . ($d['port'] ?? 3306) . ";dbname={$d['name']};charset=utf8mb4", $d['user'], $d['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $has = fn(string $t, string $col) => (int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t) . " AND COLUMN_NAME = " . $pdo->quote($col))->fetchColumn() > 0;
     foreach (['logo_path', 'cover_path'] as $col) if (!$has('shops', $col)) { $pdo->exec("ALTER TABLE shops ADD $col VARCHAR(120) NULL"); $log[] = "Banco: coluna shops.$col criada."; }
+    // ---- planos oficiais (dois planos). Não apaga nada: o plano antigo "equipe" só é desativado.
+    $plans = require $root . '/sql/plans.php'; $codes = [];
+    foreach ($plans as $p) {
+        $codes[] = $p[0]; $json = json_encode($p[10], JSON_UNESCAPED_UNICODE);
+        $ex = $pdo->prepare('SELECT id FROM plans WHERE code = ?'); $ex->execute([$p[0]]); $id = $ex->fetchColumn();
+        if ($id) {
+            $pdo->prepare('UPDATE plans SET name=?, description=?, price_cents=?, trial_days=?, max_professionals=?, max_appointments_month=?, max_messages_month=?, feat_reminders=?, feat_commissions=?, highlights=?, is_active=1, is_public=1, sort_order=? WHERE id=?')
+                ->execute([$p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $p[7], $p[8], $p[9], $json, $p[11], $id]);
+            $pdo->prepare("UPDATE subscriptions SET price_cents = ? WHERE plan_id = ? AND status IN ('trialing','incomplete')")->execute([$p[3], $id]);
+        } else {
+            $pdo->prepare('INSERT INTO plans (code,name,description,price_cents,trial_days,max_professionals,max_appointments_month,max_messages_month,feat_reminders,feat_commissions,highlights,is_active,is_public,sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,1,?)')
+                ->execute([$p[0], $p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $p[7], $p[8], $p[9], $json, $p[11]]);
+        }
+    }
+    $in = implode(',', array_fill(0, count($codes), '?'));
+    $pdo->prepare("UPDATE plans SET is_active = 0, is_public = 0 WHERE code NOT IN ($in)")->execute($codes);
+    $log[] = 'Planos atualizados: Solo R$ 99,90 e Profissional R$ 169,90.';
     $log[] = 'Banco conferido.';
     if (function_exists('opcache_reset')) @opcache_reset();
     @unlink(__FILE__); $log[] = 'Este arquivo de atualização foi apagado.';

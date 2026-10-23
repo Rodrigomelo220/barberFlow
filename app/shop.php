@@ -364,36 +364,47 @@ final class Shops
     /**
      * Preenche uma barbearia VAZIA com dados fictícios para testar o painel: serviços, equipe, clientes,
      * ~5 semanas de atendimentos (concluídos com pagamento registrado, faltas, cancelados), agenda dos próximos dias e despesas.
-     * Nomes e telefones são inventados (telefones 11 99999-00xx). Recusa se já houver atendimentos.
+     * Nomes e telefones são inventados (telefones 11 99999-00xx). Se já houver atendimentos, só completa serviços/equipe (não gera atendimentos).
      * @return array{services:int,professionals:int,customers:int,appointments:int}
      */
     public static function seedDemo(int $shopId, int $userId): array
     {
-        if ((int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$shopId]) > 0) throw new BusinessError('Esta barbearia já tem agendamentos. Os dados de exemplo só entram em uma barbearia sem atendimentos.', 'not_empty');
         $shop = DB::one('SELECT timezone FROM shops WHERE id = ?', [$shopId]);
         $tz = new DateTimeZone($shop['timezone']); $utc = new DateTimeZone('UTC');
+        $hasAppts = (int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$shopId]) > 0;
         mt_srand(20261022);
-        $svcDefs = [['Corte', 45, 4500, 'Corte na máquina ou tesoura'], ['Barba', 30, 3000, 'Barba com toalha quente'], ['Corte + barba', 70, 7000, ''], ['Sobrancelha', 15, 1500, ''], ['Pigmentação', 40, 5000, ''], ['Corte infantil', 30, 3500, '']];
-        $svc = DB::all('SELECT id, name, price_cents, duration_min FROM services WHERE shop_id = ? AND active = 1', [$shopId]);
+        $svcDefs = [['Corte degradê', 45, 4500, 'Máquina e tesoura, acabamento na navalha'], ['Corte social', 40, 4000, 'Clássico, na tesoura ou máquina'], ['Corte navalhado', 50, 5000, 'Acabamento total na navalha'],
+            ['Corte infantil', 30, 3500, 'Até 10 anos'], ['Barba', 30, 3000, 'Barba com toalha quente'], ['Corte + barba', 70, 7000, 'Combo completo'], ['Sobrancelha', 15, 1500, ''], ['Pigmentação', 40, 5000, ''], ['Hidratação', 30, 3000, '']];
+        $have = array_map('mb_strtolower', array_column(DB::all('SELECT name FROM services WHERE shop_id = ?', [$shopId]), 'name'));
         $newServices = 0;
-        if (!$svc) {
-            foreach ($svcDefs as [$n, $dur, $price, $desc]) { DB::insert('services', ['shop_id' => $shopId, 'name' => $n, 'description' => $desc, 'price_cents' => $price, 'duration_min' => $dur, 'buffer_before_min' => 0, 'buffer_after_min' => 0, 'active' => 1, 'bookable_online' => 1, 'sort_order' => 0]); $newServices++; }
-            $svc = DB::all('SELECT id, name, price_cents, duration_min FROM services WHERE shop_id = ? AND active = 1', [$shopId]);
+        foreach ($svcDefs as [$n, $dur, $price, $desc]) {
+            if (in_array(mb_strtolower($n), $have, true)) continue;
+            DB::insert('services', ['shop_id' => $shopId, 'name' => $n, 'description' => $desc, 'price_cents' => $price, 'duration_min' => $dur, 'buffer_before_min' => 0, 'buffer_after_min' => 0, 'active' => 1, 'bookable_online' => 1, 'sort_order' => 0]); $newServices++;
         }
+        $svc = DB::all('SELECT id, name, price_cents, duration_min FROM services WHERE shop_id = ? AND active = 1', [$shopId]);
         $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
         $newPros = 0;
-        if (!$pros) {
-            foreach ([['Rafael', '#b68a4b', 40], ['Diego', '#335f78', 40], ['Marcos', '#247653', 35]] as [$n, $c, $cm]) { self::createProfessional($shopId, $userId, ['name' => $n, 'color' => $c, 'commission' => $cm, 'active' => 1]); $newPros++; }
-            $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
+        $plan = Billing::state($shopId)['plan'] ?? null; $limit = $plan['max_professionals'] ?? null;
+        if (!$pros) { self::createProfessional($shopId, $userId, ['name' => 'Barbeiro', 'color' => '#b68a4b', 'commission' => 0, 'active' => 1]); $newPros++; }
+        // equipe de exemplo só se o plano permitir mais de um profissional
+        if (!$hasAppts && ($limit === null || (int)$limit > 1)) {
+            foreach ([['Diego', '#335f78', 40], ['Marcos', '#247653', 35]] as [$n, $c, $cm]) {
+                $cnt = (int)DB::val('SELECT COUNT(*) FROM professionals WHERE shop_id = ? AND active = 1', [$shopId]);
+                if ($cnt >= 3 || ($limit !== null && $cnt >= (int)$limit)) break;
+                self::createProfessional($shopId, $userId, ['name' => $n, 'color' => $c, 'commission' => $cm, 'active' => 1]); $newPros++;
+            }
         }
+        $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
         $svcIds = array_map(fn($x) => (int)$x['id'], $svc);
         foreach ($pros as $p) {
-            if ((int)DB::val('SELECT COUNT(*) FROM professional_services WHERE professional_id = ?', [$p['id']]) === 0) self::setProfessionalServices($shopId, (int)$p['id'], $svcIds);
+            $linked = array_map('intval', array_column(DB::all('SELECT service_id FROM professional_services WHERE professional_id = ?', [$p['id']]), 'service_id'));
+            if (array_diff($svcIds, $linked)) self::setProfessionalServices($shopId, (int)$p['id'], array_unique(array_merge($linked, $svcIds)));
             if ((int)DB::val('SELECT COUNT(*) FROM working_hours WHERE professional_id = ?', [$p['id']]) === 0) {
                 $rows = []; for ($wd = 1; $wd <= 6; $wd++) { $rows[] = ['weekday' => $wd, 'start' => '09:00', 'end' => $wd === 6 ? '16:00' : '12:00']; if ($wd < 6) $rows[] = ['weekday' => $wd, 'start' => '13:00', 'end' => '19:00']; }
                 self::setHours($shopId, (int)$p['id'], $rows);
             }
         }
+        if ($hasAppts) return ['services' => $newServices, 'professionals' => $newPros, 'customers' => 0, 'appointments' => 0];
         $first = ['Carlos', 'João', 'Pedro', 'Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Bruno', 'Felipe', 'André', 'Thiago', 'Vinícius', 'Eduardo', 'Rodrigo', 'Leandro', 'Fábio', 'Gustavo', 'Henrique'];
         $last = ['Silva', 'Souza', 'Oliveira', 'Santos', 'Lima', 'Pereira', 'Costa', 'Ribeiro', 'Almeida', 'Carvalho', 'Gomes', 'Martins'];
         $cust = [];

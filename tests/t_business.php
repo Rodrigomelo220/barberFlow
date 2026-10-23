@@ -317,7 +317,13 @@ t('dados de exemplo: preenche barbearia vazia, não duplica e recusa se já houv
     eq((int)DB::val("SELECT COUNT(*) FROM (SELECT a.id FROM appointments a JOIN appointments b ON a.professional_id = b.professional_id AND a.id < b.id AND a.status='confirmed' AND b.status='confirmed' AND a.starts_at < b.ends_at AND b.starts_at < a.ends_at WHERE a.shop_id = ?) x", [$s]), 0, 'sem sobreposição');
     ok((int)DB::val("SELECT COUNT(*) FROM shop_payments WHERE shop_id = ?", [$s]) > 20); ok((int)DB::val("SELECT COUNT(*) FROM expenses WHERE shop_id = ?", [$s]) === 4);
     eq((int)DB::val("SELECT COUNT(*) FROM appointments WHERE shop_id = ? AND status='confirmed' AND starts_at < ?", [$s, dt_db(now_utc())]), 0, 'passado nunca fica como confirmado');
-    throws(fn() => Shops::seedDemo($s, $u), 'not_empty');
+    $before = (int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$s]); $r2 = Shops::seedDemo($s, $u); eq($r2['appointments'], 0); eq((int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$s]), $before, 'não duplica atendimentos'); eq($r2['services'], 0, 'não duplica serviços');
+    ok((int)DB::val("SELECT COUNT(*) FROM services WHERE shop_id = ? AND name LIKE 'Corte%'", [$s]) >= 4, 'cortes cadastrados');
     $d = Shops::dashboard($s, SP); eq(count($d['week_ahead']), 7);
+});
+t('planos oficiais: só dois (R$ 99,90 com 1 profissional e R$ 169,90 com equipe)', function () {
+    $plans = require BF_ROOT . '/sql/plans.php';
+    eq(count($plans), 2); eq($plans[0][3], 9990); eq($plans[0][5], 1); eq($plans[1][3], 16990); ok($plans[1][5] > 1);
+    foreach ($plans as $p) ok($p[7] > 0 || $p[8] === 0, 'nenhum plano com mensagens ilimitadas');
 });
 done();

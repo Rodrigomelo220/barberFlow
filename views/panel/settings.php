@@ -40,7 +40,7 @@
 </form>
 <?php if (cfg('app.mode', 'demo') === 'demo' && Ctx::writable($ctx)): ?>
 <div class="card"><h2>Dados de exemplo</h2>
-  <p class="muted">Preenche esta barbearia com serviços, equipe, clientes fictícios e cerca de 5 semanas de atendimentos, pagamentos e despesas para você testar os gráficos, a agenda e o financeiro. Só funciona se ainda não houver agendamentos.</p>
+  <p class="muted">Preenche esta barbearia com serviços, equipe, clientes fictícios e cerca de 5 semanas de atendimentos, pagamentos e despesas para você testar os gráficos, a agenda e o financeiro. Os atendimentos de exemplo só são criados se ainda não houver agendamentos; os serviços (cortes, barba etc.) são sempre completados.</p>
   <?= post_form('/painel/configuracoes/exemplo', '<button class="btn btn-outline-dark">Preencher com dados de exemplo</button>', '', 'Criar dados fictícios nesta barbearia?') ?>
 </div>
 <?php endif; ?>

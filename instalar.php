@@ -51,11 +51,7 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST' && $reqOk) {
             $sql = file_get_contents(__DIR__ . '/sql/schema.sql');
             foreach (explode("\n-- #\n", $sql) as $stmt) { $stmt = trim($stmt); if ($stmt !== '') $pdo->exec($stmt); }
             $now = gmdate('Y-m-d H:i:s');
-            $plans = [
-                ['basico', 'Básico', 'Para quem trabalha sozinho.', 3990, 7, 1, 150, 0, 0, 0, ['1 profissional', 'Página de agendamento online', 'Até 150 agendamentos por mês', 'Sem lembretes automáticos'], 1],
-                ['profissional', 'Profissional', 'Para a barbearia com pequena equipe.', 7990, 7, 3, 600, 300, 1, 1, ['Até 3 profissionais', 'Até 600 agendamentos por mês', 'Lembretes automáticos (até 300 mensagens/mês)', 'Comissões por profissional'], 2],
-                ['equipe', 'Equipe', 'Para barbearias maiores.', 14990, 7, 10, null, 1000, 1, 1, ['Até 10 profissionais', 'Agendamentos sem limite mensal', 'Lembretes automáticos (até 1.000 mensagens/mês)', 'Comissões por profissional'], 3],
-            ];
+            $plans = require __DIR__ . '/sql/plans.php';
             $ins = $pdo->prepare('INSERT INTO plans (code,name,description,price_cents,trial_days,max_professionals,max_appointments_month,max_messages_month,feat_reminders,feat_commissions,highlights,is_active,is_public,sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,1,?)');
             foreach ($plans as $p) $ins->execute([$p[0], $p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $p[7], $p[8], $p[9], json_encode($p[10], JSON_UNESCAPED_UNICODE), $p[11]]);
             $pdo->prepare('INSERT INTO users (email,password_hash,name,is_admin,created_at) VALUES (?,?,?,1,?)')->execute([mb_strtolower($v['admin_email']), password_hash($adminPass, PASSWORD_DEFAULT), $v['admin_name'], $now]);
