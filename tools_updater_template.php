@@ -8,13 +8,16 @@ const UPD_KEY = '__KEY__';
 header('X-Robots-Tag: noindex'); header('Content-Type: text/html; charset=utf-8');
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 function page(string $body): never { echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atualizar BarberFlow</title><body style="font:16px system-ui;max-width:640px;margin:30px auto;padding:0 16px;color:#202522;background:#f5f3ef"><h1>Atualizar BarberFlow</h1>' . $body; exit; }
-if (!hash_equals(UPD_KEY, (string)($_GET['k'] ?? ''))) { http_response_code(403); page('<p>Link incorreto. Use o endereço completo com <b>?k=…</b> que recebeu.</p>'); }
 if (!class_exists('ZipArchive')) page('<p>Este servidor não tem a extensão ZipArchive. Avise quem te enviou o arquivo.</p>');
 $root = __DIR__;
 if (!is_file($root . '/config.php')) page('<p>Não achei o <code>config.php</code> aqui. Este arquivo deve ficar na mesma pasta do sistema já instalado (se ainda não instalou, use o <code>instalar.php</code>).</p>');
+// A chave é digitada no formulário (hospedagens como a InfinityFree perdem o "?k=" na primeira visita).
+$given = (string)($_POST['k'] ?? $_GET['k'] ?? '');
+$formTop = '<form method="post"><p><label>Chave de atualização<br><input name="k" value="' . h($given) . '" autocomplete="off" style="padding:10px;font-size:16px;width:100%;max-width:320px;border:1px solid #bbb;border-radius:8px"></label></p><button style="padding:12px 20px;font-size:16px;border:0;border-radius:10px;background:#202522;color:#fff">Atualizar agora</button></form>';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    page('<p>Isto vai atualizar os arquivos do sistema e ajustar o banco. Seus dados, <code>config.php</code> e imagens enviadas não são apagados.</p><form method="post"><button style="padding:12px 20px;font-size:16px;border:0;border-radius:10px;background:#202522;color:#fff">Atualizar agora</button></form>');
+    page('<p>Isto vai atualizar os arquivos do sistema e ajustar o banco. Seus dados, <code>config.php</code> e imagens enviadas não são apagados.</p>' . $formTop);
 }
+if (!hash_equals(UPD_KEY, trim($given))) { http_response_code(403); page('<p style="color:#b7443d">Chave incorreta.</p>' . $formTop); }
 $log = [];
 try {
     $tmp = tempnam(sys_get_temp_dir(), 'bfu'); file_put_contents($tmp, base64_decode(preg_replace('/\s+/', '', (string)file_get_contents(__FILE__, false, null, __COMPILER_HALT_OFFSET__))));
