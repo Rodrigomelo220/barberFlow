@@ -102,4 +102,34 @@ final class Admin
     {
         return DB::all('SELECT o.id, o.shop_id, s.name AS shop, o.kind, o.status, o.send_at, o.detail FROM outbox o JOIN shops s ON s.id = o.shop_id ORDER BY o.id DESC LIMIT ' . (int)$limit);
     }
+
+    // ---------------------------------------------------------- administradores da plataforma
+    public static function admins(): array
+    {
+        return DB::all('SELECT id, name, email, created_at FROM users WHERE is_admin = 1 ORDER BY id');
+    }
+
+    /** Promove uma conta JÁ EXISTENTE (cadastrada) a administrador da plataforma. */
+    public static function grantAdmin(int $actorId, string $email): void
+    {
+        $email = mb_strtolower(trim($email));
+        $u = DB::one('SELECT id, is_admin FROM users WHERE email = ?', [$email]);
+        if (!$u) throw new BusinessError('Não há conta com este e-mail. Peça para a pessoa criar a conta em /cadastro primeiro.', 'not_found', 404);
+        if ((int)$u['is_admin']) throw new BusinessError('Esta pessoa já é administradora.');
+        DB::exec('UPDATE users SET is_admin = 1 WHERE id = ?', [$u['id']]);
+        audit(null, $actorId, 'admin.granted', 'user', $u['id'], $email);
+    }
+
+    public static function revokeAdmin(int $actorId, int $userId): void
+    {
+        if ($userId === $actorId) throw new BusinessError('Você não pode remover o seu próprio acesso. Peça a outro administrador.', 'forbidden', 403);
+        DB::tx(function () use ($actorId, $userId) {
+            $n = (int)DB::val('SELECT COUNT(*) FROM users WHERE is_admin = 1 FOR UPDATE');
+            $u = DB::one('SELECT id, email, is_admin FROM users WHERE id = ?', [$userId]);
+            if (!$u || !(int)$u['is_admin']) throw new BusinessError('Administrador não encontrado.', 'not_found', 404);
+            if ($n <= 1) throw new BusinessError('Precisa existir ao menos um administrador.', 'last_admin');
+            DB::exec('UPDATE users SET is_admin = 0 WHERE id = ?', [$userId]);
+            audit(null, $actorId, 'admin.revoked', 'user', $userId, (string)$u['email']);
+        });
+    }
 }

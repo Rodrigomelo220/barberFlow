@@ -7,6 +7,6 @@ $an = fn($h, $l) => '<a class="nav-link" href="' . e(url($h)) . '"' . (($h === '
 <body><div class="rail"></div>
 <header class="top"><div class="container-x"><a class="brand" href="<?= e(url('/admin')) ?>"><i></i>BarberFlow · Admin</a><span class="grow"></span>
   <span class="muted small"><?= e($u['email']) ?></span><?= post_form('/sair', '<button class="linklike">Sair</button>', 'inline') ?></div></header>
-<nav class="tabs"><div class="container-x"><?= $an('/admin', 'Visão geral') ?><?= $an('/admin/barbearias', 'Barbearias') ?><?= $an('/admin/planos', 'Planos') ?><?= $an('/admin/eventos', 'Cobrança') ?><?= $an('/admin/mensagens', 'Mensagens') ?></div></nav>
+<nav class="tabs"><div class="container-x"><?= $an('/admin', 'Visão geral') ?><?= $an('/admin/barbearias', 'Barbearias') ?><?= $an('/admin/planos', 'Planos') ?><?= $an('/admin/eventos', 'Cobrança') ?><?= $an('/admin/mensagens', 'Mensagens') ?><?= $an('/admin/administradores', 'Administradores') ?></div></nav>
 <main><div class="container-x"><?php require BF_ROOT . '/views/_flash.php'; ?><?= $content ?></div></main>
 <script src="<?= e(url('/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script><script src="<?= e(url('/assets/app.js')) ?>"></script></body></html>

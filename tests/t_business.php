@@ -361,4 +361,14 @@ t('destaques dos planos batem com os números aplicados', function () {
         ok($p[9] ? str_contains($txt, 'Comissões por profissional') && !str_contains($txt, 'Sem comissões') : str_contains($txt, 'Sem comissões'), "{$p[1]}: comissões");
     }
 });
+t('administradores: promover conta existente, recusar inexistente, não remover a si nem o último', function () {
+    $a = mk_user('adm1@x.com', 'Adm', true); $b = mk_user('adm2@x.com');
+    throws(fn() => Admin::grantAdmin($a, 'ninguem@x.com'), 'not_found');
+    Admin::grantAdmin($a, ' ADM2@x.com '); eq((int)DB::val('SELECT is_admin FROM users WHERE id = ?', [$b]), 1);
+    throws(fn() => Admin::grantAdmin($a, 'adm2@x.com'));
+    throws(fn() => Admin::revokeAdmin($a, $a), 'forbidden');
+    Admin::revokeAdmin($b, $a); eq((int)DB::val('SELECT is_admin FROM users WHERE id = ?', [$a]), 0);
+    throws(fn() => Admin::revokeAdmin($b, $b), 'forbidden');
+    ok((int)DB::val("SELECT COUNT(*) FROM audit_logs WHERE action IN ('admin.granted','admin.revoked')") >= 2, 'auditado');
+});
 done();

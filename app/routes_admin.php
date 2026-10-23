@@ -34,6 +34,18 @@ function register_admin_routes(Router $r): void
             throw new BusinessError('Ação inválida.');
         });
     });
+    $r->get('/admin/administradores', function () {
+        $u = admin_user();
+        render('admin/admins', ['u' => $u, 'rows' => Admin::admins(), 'title' => 'Administradores'], 'layout_admin');
+    });
+    $r->post('/admin/administradores', function () {
+        $u = admin_user();
+        aact($u, '/admin/administradores', function ($u) { Admin::grantAdmin((int)$u['id'], input('email')); return 'Administrador adicionado.'; });
+    });
+    $r->post('/admin/administradores/{id}/remover', function ($id) {
+        $u = admin_user();
+        aact($u, '/admin/administradores', function ($u) use ($id) { Admin::revokeAdmin((int)$u['id'], (int)$id); return 'Acesso de administrador removido.'; });
+    });
     $r->get('/admin/planos', function () {
         $u = admin_user();
         render('admin/plans', ['u' => $u, 'plans' => Admin::plans(), 'title' => 'Planos'], 'layout_admin');

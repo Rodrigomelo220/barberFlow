@@ -22,6 +22,7 @@ Agenda online para barbearias, feita para rodar em hospedagem compartilhada (Inf
   | Mensagens/mês (confirmação + lembretes) | até 100 | até 600 |
   | Comissões por profissional | não | sim |
   | Página pública, logo/capa, agenda, financeiro, clientes | sim | sim |
+- Administração da plataforma: aba "Administradores" (adicionar por e-mail de conta já cadastrada, remover; nunca fica sem administrador).
 - Botão "Preencher com dados de exemplo" em Configurações (só modo demo, só barbearia sem atendimentos): clientes e atendimentos fictícios.
 - Concluir atendimento **não** registra pagamento automaticamente.
 - Assinatura, inadimplência gradual (nada é apagado), LGPD (exportar/anonimizar), painel de administrador.
