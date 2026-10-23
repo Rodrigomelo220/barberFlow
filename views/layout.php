@@ -38,7 +38,7 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <?php if ($panel): $lvl = $ctx['billing']['access']['level']; ?>
 <?php
 $items = [['/painel', 'Início', 'house', true], ['/painel/agenda', 'Agenda', 'calendar3', true], ['/painel/clientes', 'Clientes', 'people', Ctx::can($ctx, 'customers.view')],
-  ['/painel/servicos', 'Serviços', 'scissors', Ctx::can($ctx, 'services.manage')], ['/painel/equipe', 'Equipe', 'person-badge', Ctx::can($ctx, 'professionals.manage')],
+  ['/painel/servicos', 'Serviços', 'scissors', Ctx::can($ctx, 'services.manage')], ['/painel/equipe', solo_plan($ctx) ? 'Meu perfil' : 'Equipe', 'person-badge', Ctx::can($ctx, 'professionals.manage')],
   ['/painel/bloqueios', 'Bloqueios', 'slash-circle', Ctx::can($ctx, 'agenda.manage')], ['/painel/financeiro', 'Financeiro', 'cash-coin', Ctx::can($ctx, 'finance.view')],
   ['/painel/mensagens', 'Mensagens', 'chat-dots', Ctx::can($ctx, 'messages.view')], ['/painel/configuracoes', 'Configurações', 'gear', Ctx::can($ctx, 'settings.manage')],
   ['/painel/assinatura', 'Assinatura', 'credit-card', Ctx::can($ctx, 'billing.manage')]];

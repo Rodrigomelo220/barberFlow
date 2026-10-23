@@ -7,7 +7,7 @@
   <?php endforeach; ?>
   <div class="grid g2">
     <div class="field"><label for="pro">Profissional</label><select class="form-select" id="pro" name="pro" data-slot-src="pro">
-      <?php if (Ctx::ownProfessionalIds($ctx) === null): ?><option value="any">Qualquer profissional</option><?php endif; ?>
+      <?php if (Ctx::ownProfessionalIds($ctx) === null && !solo_plan($ctx)): ?><option value="any">Qualquer profissional</option><?php endif; ?>
       <?php foreach ($pros as $p): ?><option value="<?= (int)$p['id'] ?>"><?= e($p['name']) ?></option><?php endforeach; ?></select></div>
     <div class="field"><label for="date">Dia</label><input class="form-control" type="date" id="date" name="date" data-slot-src="date" value="<?= e(now_utc()->setTimezone(new DateTimeZone($ctx['tz']))->format('Y-m-d')) ?>"></div>
   </div>

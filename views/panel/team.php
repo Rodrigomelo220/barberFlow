@@ -1,8 +1,10 @@
 <?php $plan = $ctx['billing']['plan']; $act = count(array_filter($rows, fn($p) => (int)$p['active'])); ?>
-<div class="page-head"><h1>Equipe</h1></div>
-<p class="muted">Profissionais ativos: <?= $act ?><?= $plan && $plan['max_professionals'] !== null ? ' de ' . (int)$plan['max_professionals'] . ' no plano ' . e($plan['name']) : '' ?>.</p>
+<?php $solo = solo_plan($ctx); ?>
+<div class="page-head"><h1><?= $solo ? 'Meu perfil' : 'Equipe' ?></h1></div>
+<?php if (!$solo): ?><p class="muted">Profissionais ativos: <?= $act ?><?= $plan && $plan['max_professionals'] !== null ? ' de ' . (int)$plan['max_professionals'] . ' no plano ' . e($plan['name']) : '' ?>.</p><?php endif; ?>
 <?php $full = $plan && $plan['max_professionals'] !== null && $act >= (int)$plan['max_professionals']; ?>
-<?php if (Ctx::writable($ctx) && $full): ?>
+<?php if ($solo): ?>
+<?php elseif (Ctx::writable($ctx) && $full): ?>
 <div class="card"><h2>Mais profissionais na equipe</h2><p class="muted mb-2">O plano <?= e($plan['name']) ?> inclui <?= (int)$plan['max_professionals'] ?> profissional(is) ativo(s). Para cadastrar mais, mude de plano.</p><a class="btn btn-outline-dark" href="<?= e(url('/painel/assinatura')) ?>">Ver planos</a></div>
 <?php elseif (Ctx::writable($ctx)): ?>
 <form method="post" action="<?= e(url('/painel/equipe')) ?>" class="card"><?= csrf_field() ?><h2>Novo profissional</h2>

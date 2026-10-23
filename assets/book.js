@@ -36,7 +36,7 @@
     if (C.any && pros.length > 1) sel.appendChild(el('option', { value: 'any', textContent: 'Qualquer profissional' }));
     pros.forEach(function (p) { sel.appendChild(el('option', { value: p.id, textContent: p.name })); });
     if (!pros.length) sel.appendChild(el('option', { value: '', textContent: 'Nenhum profissional faz todos esses serviços' }));
-    state.pro = sel.value;
+    state.pro = sel.value; sel.parentNode.style.display = pros.length === 1 ? 'none' : '';
   }
   var dateEl = $('date'); dateEl.min = C.today;
   (function () { var d = new Date(C.today + 'T12:00:00'); d.setDate(d.getDate() + C.maxDays); dateEl.max = d.toISOString().slice(0, 10); })();

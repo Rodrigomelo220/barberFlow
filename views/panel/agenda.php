@@ -9,8 +9,8 @@ $prev = $day->modify('-1 day')->format('Y-m-d'); $next = $day->modify('+1 day')-
       <a class="btn btn-sm btn-outline-dark" href="?data=<?= e($next . $q) ?>" aria-label="Próximo dia">→</a>
       <a class="btn btn-sm btn-outline-dark" href="?data=<?= e(now_utc()->setTimezone($day->getTimezone())->format('Y-m-d') . $q) ?>">Hoje</a></div>
     <form method="get" class="actions"><input type="hidden" name="data" value="<?= e($day->format('Y-m-d')) ?>">
-      <select class="form-select" name="prof" aria-label="Profissional" style="width:auto;min-height:36px" onchange="this.form.submit()"><option value="">Todos os profissionais</option>
-      <?php foreach ($pros as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $prof === (int)$p['id'] ? 'selected' : '' ?>><?= e($p['name']) ?></option><?php endforeach; ?></select>
+      <?php if (!solo_plan($ctx)): ?><select class="form-select" name="prof" aria-label="Profissional" style="width:auto;min-height:36px" onchange="this.form.submit()"><option value="">Todos os profissionais</option>
+      <?php foreach ($pros as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $prof === (int)$p['id'] ? 'selected' : '' ?>><?= e($p['name']) ?></option><?php endforeach; ?></select><?php endif; ?>
       <noscript><button class="btn btn-sm btn-outline-dark">Filtrar</button></noscript></form>
   </div>
 </div>

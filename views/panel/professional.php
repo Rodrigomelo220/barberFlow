@@ -1,10 +1,10 @@
 <?php $plan = $ctx['billing']['plan']; $byDay = []; foreach ($hours as $h) $byDay[(int)$h['weekday']][] = $h; ?>
-<div class="page-head"><div><a class="small" href="<?= e(url('/painel/equipe')) ?>">← Equipe</a><h1 style="margin-top:4px"><?= e($p['name']) ?></h1></div></div>
+<div class="page-head"><div><a class="small" href="<?= e(url('/painel/equipe')) ?>">← <?= solo_plan($ctx) ? 'Meu perfil' : 'Equipe' ?></a><h1 style="margin-top:4px"><?= e($p['name']) ?></h1></div></div>
 <form method="post" action="<?= e(url('/painel/equipe/' . $p['id'])) ?>" class="card"><?= csrf_field() ?><h2>Dados</h2>
   <div class="grid g2"><?= fld('name', 'Nome', old('name', $p['name']), ['required' => 1]) ?><?= fld('color', 'Cor na agenda', old('color', $p['color']), ['type' => 'color']) ?></div>
   <?= fld('bio', 'Apresentação', old('bio', $p['bio']), ['maxlength' => 300]) ?>
   <?php if ($plan && (int)$plan['feat_commissions']): ?><?= fld('commission', 'Comissão (%)', old('commission', rtrim(rtrim(number_format((float)$p['commission_percent'], 2, '.', ''), '0'), '.')), ['inputmode' => 'decimal', 'hint' => 'Vale para os próximos recebimentos; os anteriores mantêm o percentual da época.']) ?>
-  <?php else: ?><input type="hidden" name="commission" value="<?= e($p['commission_percent']) ?>"><p class="hint">Comissões não estão incluídas no seu plano.</p><?php endif; ?>
+  <?php else: ?><input type="hidden" name="commission" value="<?= e($p['commission_percent']) ?>"><?php endif; ?>
   <?= fld('active', 'Ativo na agenda', (int)$p['active'], ['type' => 'checkbox']) ?>
   <?php if (Ctx::writable($ctx)): ?><button class="btn btn-primary">Salvar</button><?php endif; ?></form>
 

@@ -32,7 +32,9 @@
     <?= fld('max_days_ahead', 'Agendar com até (dias)', old('max_days_ahead', $s['max_days_ahead']), ['type' => 'number', 'min' => 1, 'max' => 365]) ?>
     <?= fld('cancel_min_notice_minutes', 'Cliente pode cancelar até (min antes)', old('cancel_min_notice_minutes', $s['cancel_min_notice_minutes']), ['type' => 'number', 'min' => 0]) ?>
   </div>
+  <?php if (solo_plan($ctx)): ?><input type="hidden" name="allow_any_professional" value="<?= (int)$s['allow_any_professional'] ?>"><?php else: ?>
   <?= fld('allow_any_professional', 'Permitir “qualquer profissional” na página pública', (int)$s['allow_any_professional'], ['type' => 'checkbox']) ?>
+  <?php endif; ?>
   <?= fld('allow_online_cancel', 'Permitir que o cliente cancele/remarque pelo link', (int)$s['allow_online_cancel'], ['type' => 'checkbox']) ?>
   <hr class="sep"><h2>Lembretes (simulados)</h2>
   <?= fld('reminders_enabled', 'Programar lembretes', (int)$s['reminders_enabled'], ['type' => 'checkbox']) ?>

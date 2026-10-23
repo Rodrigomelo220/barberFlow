@@ -128,6 +128,8 @@ function base_path(): string
     return $b;
 }
 function url(string $path = '/'): string { return base_path() . $path; }
+/** Plano de 1 profissional (Solo): telas de equipe/comparação com outros planos não aparecem. */
+function solo_plan(array $ctx): bool { $p = $ctx['billing']['plan'] ?? null; return $p && $p['max_professionals'] !== null && (int)$p['max_professionals'] === 1; }
 /** URL de arquivo estático com versão (data de modificação): o navegador nunca reaproveita CSS/JS antigo após uma atualização. */
 function asset(string $path): string { $f = BF_ROOT . $path; $v = is_file($f) ? (string)filemtime($f) : '1'; return url($path) . '?v=' . $v; }
 /** HTTPS direto ou atrás de proxy/CDN (hospedagens compartilhadas). Em domínio público sem sinal nenhum, assume https; só localhost/IP ficam em http. */

@@ -20,7 +20,8 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
 </div>
 
 <div class="card"><h2><?= $canStart ? 'Escolha um plano' : 'Planos' ?></h2>
-  <?php foreach ($plans as $p): $cur = $plan && $plan['code'] === $p['code']; ?>
+  <?php foreach ($plans as $p): $cur = $plan && $plan['code'] === $p['code'];
+    if (!$canStart && $plan && (int)$p['price_cents'] > (int)($sub['price_cents'] ?? $plan['price_cents'])) continue; /* não mostra plano superior ao contratado */ ?>
     <div class="choice" style="cursor:default"><span class="t"><b><?= e($p['name']) ?></b> <?= $cur ? badge('atual', 'blue') : '' ?><br><span class="muted small"><?= e(implode(' · ', decode_list($p['highlights']))) ?></span></span><span class="p"><?= e(money((int)$p['price_cents'])) ?></span>
     <span>
       <?php if ($canStart): ?>
