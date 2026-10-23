@@ -48,7 +48,7 @@ $clamp = fn($v) => max($lo, min($hi, $v));
           <div class="tl-block" style="top:<?= ($a - $lo) * $PX ?>px;height:<?= max(18, ($z - $a) * $PX) ?>px" title="<?= e($b['reason'] ?: 'Bloqueio') ?>"><i class="bi bi-lock-fill"></i> <?= e($b['reason'] ?: 'Bloqueio') ?></div>
         <?php endforeach; ?>
         <?php foreach ($rows as $a): if ((int)$a['professional_id'] !== $pid) continue; $s0 = $mins($a['starts_at']); $s1 = $mins($a['ends_at']); $dead = in_array($a['status'], ['canceled', 'no_show'], true); ?>
-          <a class="tl-appt st-<?= e($a['status']) ?><?= $dead ? ' dead' : '' ?>" href="<?= e(url('/painel/agendamentos/' . $a['id'])) ?>" style="top:<?= ($s0 - $lo) * $PX ?>px;height:<?= max(26, ($s1 - $s0) * $PX - 2) ?>px;--pc:<?= e($p['color']) ?>">
+          <a class="tl-appt st-<?= e($a['status']) ?><?= $dead ? ' dead' : '' ?>" href="<?= e(url('/painel/agendamentos/' . $a['id'])) ?>" style="top:<?= ($s0 - $lo) * $PX ?>px;height:<?= max(34, ($s1 - $s0) * $PX - 2) ?>px;--pc:<?= e($p['color']) ?>">
             <b><?= e($a['customer_name']) ?></b><span><?= e(dt_local($a['starts_at'], $ctx['tz'], 'H:i')) ?>–<?= e(dt_local($a['ends_at'], $ctx['tz'], 'H:i')) ?> · <?= e($a['services']) ?></span>
           </a>
         <?php endforeach; ?>

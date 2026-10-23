@@ -375,6 +375,15 @@ function register_panel_routes(Router $r): void
         });
     });
 
+    $r->post('/painel/configuracoes/exemplo', function () {
+        $ctx = panel();
+        pact($ctx, 'settings.manage', '/painel/configuracoes', function () use ($ctx) {
+            if (cfg('app.mode', 'demo') !== 'demo') throw new BusinessError('Dados de exemplo só existem no modo de demonstração.', 'forbidden', 403);
+            $r = Shops::seedDemo($ctx['shop_id'], (int)$ctx['user']['id']);
+            return ['Dados de exemplo criados: ' . $r['appointments'] . ' atendimentos e ' . $r['customers'] . ' clientes fictícios.', '/painel'];
+        });
+    });
+
     // ------------------------------------------------------------ assinatura e checkout simulado
     $r->get('/painel/assinatura', function () {
         $ctx = panel(true);

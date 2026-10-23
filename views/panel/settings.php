@@ -38,3 +38,9 @@
   <?= fld('reminder_hours', 'Antecedência dos lembretes (horas, separadas por vírgula)', old('reminder_hours', $s['reminder_hours']), ['hint' => 'Ex.: 24,2 — até 4 lembretes. Exige plano com lembretes.']) ?>
   <?php if (Ctx::writable($ctx)): ?><button class="btn btn-primary">Salvar</button><?php endif; ?>
 </form>
+<?php if (cfg('app.mode', 'demo') === 'demo' && Ctx::writable($ctx)): ?>
+<div class="card"><h2>Dados de exemplo</h2>
+  <p class="muted">Preenche esta barbearia com serviços, equipe, clientes fictícios e cerca de 5 semanas de atendimentos, pagamentos e despesas para você testar os gráficos, a agenda e o financeiro. Só funciona se ainda não houver agendamentos.</p>
+  <?= post_form('/painel/configuracoes/exemplo', '<button class="btn btn-outline-dark">Preencher com dados de exemplo</button>', '', 'Criar dados fictícios nesta barbearia?') ?>
+</div>
+<?php endif; ?>

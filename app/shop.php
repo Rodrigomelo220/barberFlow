@@ -359,6 +359,87 @@ final class Shops
         return $path && preg_match('/^[0-9]+-(logo|cover)-[0-9a-f]{12}\.(jpg|png|webp)$/', $path) ? url('/uploads/' . $path) : null;
     }
 
+    // ------------------------------------------------------- dados de exemplo (modo demo)
+
+    /**
+     * Preenche uma barbearia VAZIA com dados fictícios para testar o painel: serviços, equipe, clientes,
+     * ~5 semanas de atendimentos (concluídos com pagamento registrado, faltas, cancelados), agenda dos próximos dias e despesas.
+     * Nomes e telefones são inventados (telefones 11 99999-00xx). Recusa se já houver atendimentos.
+     * @return array{services:int,professionals:int,customers:int,appointments:int}
+     */
+    public static function seedDemo(int $shopId, int $userId): array
+    {
+        if ((int)DB::val('SELECT COUNT(*) FROM appointments WHERE shop_id = ?', [$shopId]) > 0) throw new BusinessError('Esta barbearia já tem agendamentos. Os dados de exemplo só entram em uma barbearia sem atendimentos.', 'not_empty');
+        $shop = DB::one('SELECT timezone FROM shops WHERE id = ?', [$shopId]);
+        $tz = new DateTimeZone($shop['timezone']); $utc = new DateTimeZone('UTC');
+        mt_srand(20261022);
+        $svcDefs = [['Corte', 45, 4500, 'Corte na máquina ou tesoura'], ['Barba', 30, 3000, 'Barba com toalha quente'], ['Corte + barba', 70, 7000, ''], ['Sobrancelha', 15, 1500, ''], ['Pigmentação', 40, 5000, ''], ['Corte infantil', 30, 3500, '']];
+        $svc = DB::all('SELECT id, name, price_cents, duration_min FROM services WHERE shop_id = ? AND active = 1', [$shopId]);
+        $newServices = 0;
+        if (!$svc) {
+            foreach ($svcDefs as [$n, $dur, $price, $desc]) { DB::insert('services', ['shop_id' => $shopId, 'name' => $n, 'description' => $desc, 'price_cents' => $price, 'duration_min' => $dur, 'buffer_before_min' => 0, 'buffer_after_min' => 0, 'active' => 1, 'bookable_online' => 1, 'sort_order' => 0]); $newServices++; }
+            $svc = DB::all('SELECT id, name, price_cents, duration_min FROM services WHERE shop_id = ? AND active = 1', [$shopId]);
+        }
+        $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
+        $newPros = 0;
+        if (!$pros) {
+            foreach ([['Rafael', '#b68a4b', 40], ['Diego', '#335f78', 40], ['Marcos', '#247653', 35]] as [$n, $c, $cm]) { self::createProfessional($shopId, $userId, ['name' => $n, 'color' => $c, 'commission' => $cm, 'active' => 1]); $newPros++; }
+            $pros = DB::all('SELECT id, name, color, commission_percent FROM professionals WHERE shop_id = ? AND active = 1 ORDER BY id', [$shopId]);
+        }
+        $svcIds = array_map(fn($x) => (int)$x['id'], $svc);
+        foreach ($pros as $p) {
+            if ((int)DB::val('SELECT COUNT(*) FROM professional_services WHERE professional_id = ?', [$p['id']]) === 0) self::setProfessionalServices($shopId, (int)$p['id'], $svcIds);
+            if ((int)DB::val('SELECT COUNT(*) FROM working_hours WHERE professional_id = ?', [$p['id']]) === 0) {
+                $rows = []; for ($wd = 1; $wd <= 6; $wd++) { $rows[] = ['weekday' => $wd, 'start' => '09:00', 'end' => $wd === 6 ? '16:00' : '12:00']; if ($wd < 6) $rows[] = ['weekday' => $wd, 'start' => '13:00', 'end' => '19:00']; }
+                self::setHours($shopId, (int)$p['id'], $rows);
+            }
+        }
+        $first = ['Carlos', 'João', 'Pedro', 'Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Bruno', 'Felipe', 'André', 'Thiago', 'Vinícius', 'Eduardo', 'Rodrigo', 'Leandro', 'Fábio', 'Gustavo', 'Henrique'];
+        $last = ['Silva', 'Souza', 'Oliveira', 'Santos', 'Lima', 'Pereira', 'Costa', 'Ribeiro', 'Almeida', 'Carvalho', 'Gomes', 'Martins'];
+        $cust = [];
+        for ($i = 0; $i < 18; $i++) {
+            $cust[] = (int)DB::insert('customers', ['shop_id' => $shopId, 'name' => $first[$i] . ' ' . $last[($i * 5) % count($last)], 'phone' => '5511999990' . sprintf('%03d', $i + 1), 'notes' => '', 'preferences' => '', 'whatsapp_optin' => 0, 'created_at' => dt_db(now_utc()->modify('-' . mt_rand(5, 40) . ' days'))]);
+        }
+        $now = now_utc(); $today = $now->setTimezone($tz)->setTime(0, 0);
+        $methods = ['pix', 'pix', 'pix', 'cash', 'debit', 'credit']; $count = 0;
+        DB::tx(function () use ($shopId, $userId, $pros, $svc, $cust, $tz, $utc, $now, $today, $methods, &$count) {
+            for ($off = -35; $off <= 10; $off++) {
+                $day = $today->modify(($off >= 0 ? '+' : '') . $off . ' day');
+                $wd = (int)$day->format('N'); if ($wd === 7) continue;
+                foreach ($pros as $p) {
+                    $cursor = $day->setTime(9, 0); $end = $day->setTime($wd === 6 ? 16 : 19, 0); $busy = mt_rand(55, 85);
+                    while ($cursor < $end) {
+                        $h = (int)$cursor->format('G');
+                        if ($wd !== 6 && $h >= 12 && $h < 13) { $cursor = $day->setTime(13, 0); continue; }
+                        if (mt_rand(1, 100) > $busy) { $cursor = $cursor->modify('+30 minutes'); continue; }
+                        $sv = $svc[mt_rand(0, count($svc) - 1)]; $dur = (int)$sv['duration_min'];
+                        $fin = $cursor->modify("+$dur minutes");
+                        if ($fin > $end) { $cursor = $cursor->modify('+30 minutes'); continue; }
+                        if ($wd !== 6 && $h < 12 && $fin > $day->setTime(12, 0)) { $cursor = $day->setTime(13, 0); continue; }
+                        $startUtc = $cursor->setTimezone($utc); $endUtc = $fin->setTimezone($utc);
+                        $past = $endUtc <= $now; $r = mt_rand(1, 100);
+                        $status = !$past ? ($r <= 8 ? 'canceled' : 'confirmed') : ($r <= 6 ? 'canceled' : ($r <= 12 ? 'no_show' : 'completed'));
+                        $apptId = (int)DB::insert('appointments', ['shop_id' => $shopId, 'professional_id' => $p['id'], 'customer_id' => $cust[mt_rand(0, count($cust) - 1)], 'starts_at' => dt_db($startUtc), 'ends_at' => dt_db($endUtc),
+                            'occupied_start' => dt_db($startUtc), 'occupied_end' => dt_db($endUtc), 'status' => $status, 'source' => mt_rand(0, 1) ? 'link' : 'manual', 'total_price_cents' => $sv['price_cents'], 'notes' => '',
+                            'manage_token_hash' => hash('sha256', 'demo-' . bin2hex(random_bytes(8))), 'created_by' => $userId, 'created_at' => dt_db($startUtc->modify('-2 days')), 'completed_at' => $status === 'completed' ? dt_db($endUtc) : null]);
+                        DB::insert('appointment_services', ['appointment_id' => $apptId, 'position' => 0, 'service_id' => $sv['id'], 'name' => $sv['name'], 'price_cents' => $sv['price_cents'], 'duration_min' => $dur]);
+                        if ($status === 'completed' && mt_rand(1, 100) <= 90) {
+                            $cid = (int)DB::val('SELECT customer_id FROM appointments WHERE id = ?', [$apptId]);
+                            DB::insert('shop_payments', ['shop_id' => $shopId, 'appointment_id' => $apptId, 'professional_id' => $p['id'], 'customer_id' => $cid, 'kind' => 'payment', 'amount_cents' => $sv['price_cents'],
+                                'method' => $methods[mt_rand(0, count($methods) - 1)], 'status' => 'received', 'commission_percent' => $p['commission_percent'], 'received_at' => dt_db($endUtc), 'notes' => '', 'created_by' => $userId, 'created_at' => dt_db($endUtc)]);
+                        }
+                        $count++; $cursor = $fin->modify('+' . (mt_rand(0, 1) * 15) . ' minutes');
+                    }
+                }
+            }
+        });
+        foreach ([['Aluguel do ponto', 'aluguel', 180000, 5], ['Produtos (pomadas e lâminas)', 'produtos', 42000, 12], ['Energia e água', 'contas', 31000, 20], ['Marketing (impulsionamento)', 'marketing', 15000, 27]] as [$d, $c, $v, $ago]) {
+            Finance::addExpense($shopId, $userId, $d, $c, $v, 'pix', $today->modify("-$ago day")->format('Y-m-d'));
+        }
+        audit($shopId, $userId, 'shop.demo_seeded', 'shop', $shopId, "appointments=$count");
+        return ['services' => $newServices, 'professionals' => $newPros, 'customers' => count($cust), 'appointments' => $count];
+    }
+
     // ---------------------------------------------------------- agenda e painel
 
     public static function appointmentsBetween(int $shopId, DateTimeImmutable $from, DateTimeImmutable $to, ?int $proId = null): array

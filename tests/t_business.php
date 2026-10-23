@@ -309,4 +309,15 @@ t('dashboard: gráfico semanal tem 7+7 dias e conta só confirmados', function (
     eq($d['setup']['booking'], false);
 });
 
+t('dados de exemplo: preenche barbearia vazia, não duplica e recusa se já houver atendimentos', function () {
+    $u = mk_user('seed@x.com'); $s = mk_shop($u, 'seed');
+    $r = Shops::seedDemo($s, $u);
+    ok($r['appointments'] > 100, 'muitos atendimentos: ' . $r['appointments']); eq($r['customers'], 18);
+    ok((int)DB::val("SELECT COUNT(*) FROM professionals WHERE shop_id = ?", [$s]) >= 1);
+    eq((int)DB::val("SELECT COUNT(*) FROM (SELECT a.id FROM appointments a JOIN appointments b ON a.professional_id = b.professional_id AND a.id < b.id AND a.status='confirmed' AND b.status='confirmed' AND a.starts_at < b.ends_at AND b.starts_at < a.ends_at WHERE a.shop_id = ?) x", [$s]), 0, 'sem sobreposição');
+    ok((int)DB::val("SELECT COUNT(*) FROM shop_payments WHERE shop_id = ?", [$s]) > 20); ok((int)DB::val("SELECT COUNT(*) FROM expenses WHERE shop_id = ?", [$s]) === 4);
+    eq((int)DB::val("SELECT COUNT(*) FROM appointments WHERE shop_id = ? AND status='confirmed' AND starts_at < ?", [$s, dt_db(now_utc())]), 0, 'passado nunca fica como confirmado');
+    throws(fn() => Shops::seedDemo($s, $u), 'not_empty');
+    $d = Shops::dashboard($s, SP); eq(count($d['week_ahead']), 7);
+});
 done();
