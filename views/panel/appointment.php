@@ -44,7 +44,7 @@ $canEdit = Ctx::can($ctx, 'agenda.manage_own') && Ctx::writable($ctx);
 
 <?php if ($pay): ?>
 <div class="card"><h2>Lançamentos</h2>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Quando</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Quando</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Situação</th><th><span class="visually-hidden">Ações</span></th></tr></thead><tbody>
   <?php foreach ($pay as $p): $refund = $p['kind'] === 'refund'; ?>
     <tr><td><?= e(dt_local($p['received_at'] ?? $p['created_at'], $tz, 'd/m H:i')) ?></td><td><?= $refund ? 'Estorno' : 'Pagamento' ?></td><td><?= e(Finance::METHODS[$p['method']] ?? $p['method']) ?></td>
       <td class="num"><?= e(money(($refund ? -1 : 1) * (int)$p['amount_cents'])) ?></td><td><?= $p['status'] === 'received' ? badge('Recebido', 'green') : badge('Pendente', 'brass') ?></td>

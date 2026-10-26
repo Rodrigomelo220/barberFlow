@@ -130,6 +130,8 @@ t('usuário comum não acessa /admin; admin acessa', function () use ($A, $anon)
     $adm = new Http($GLOBALS['base']); $uid = mk_user('adm-http@x.com', 'Admin Http', true);
     $adm->post('/entrar', ['email' => 'adm-http@x.com', 'password' => 'SenhaBoa12345']);
     eq($adm->get('/admin')['code'], 200); ok(str_contains($adm->last['body'], 'Visão geral'));
+    $dg = $adm->get('/admin/diagnostico'); eq($dg['code'], 200); ok(str_contains($dg['body'], 'Diagnóstico') && str_contains($dg['body'], 'PHP '), 'diagnóstico'); ok(!preg_match('/SenhaForte|api_key|secret_/i', $dg['body']), 'sem segredos'); eq($A->get('/admin/diagnostico')['code'], 403);
+    eq($adm->get('/admin/sistema')['code'], 200); ok(str_contains($adm->last['body'], 'Asaas'), 'tela Sistema');
     eq($adm->get('/admin/barbearias')['code'], 200); eq($adm->get('/admin/planos')['code'], 200); eq($adm->get('/admin/eventos')['code'], 200); eq($adm->get('/admin/mensagens')['code'], 200);
     ok(str_contains($adm->get('/admin/barbearias?q=http')['body'], 'Barbearia Http'));
     $sidA = (int)DB::val("SELECT id FROM shops WHERE slug = 'barbearia-http'");

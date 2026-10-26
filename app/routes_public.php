@@ -87,6 +87,28 @@ function register_public_routes(Router $r): void
         }
     });
 
+    // ---- convite de funcionário
+    $r->get('/convite/{token}', function ($token) {
+        $inv = Invites::find($token) ?? render_error(404, 'Convite inválido ou expirado', 'Peça um novo convite ao responsável pelo negócio.');
+        render('invite', ['title' => 'Convite', 'inv' => $inv, 'token' => $token, 'user' => Auth::user()]);
+    });
+    $r->post('/convite/{token}', function ($token) {
+        csrf_check();
+        try {
+            $inv = Invites::find($token) ?? throw new BusinessError('Convite inválido ou expirado. Peça um novo ao responsável.', 'bad_token');
+            $u = Auth::user();
+            if (!$u) {
+                if (DB::one('SELECT id FROM users WHERE email = ?', [$inv['email']])) { flash('ok', 'Este e-mail já tem conta. Entre para aceitar o convite.'); redirect('/entrar?next=' . rawurlencode('/convite/' . $token)); }
+                $id = Auth::signup(input('name'), (string)$inv['email'], (string)($_POST['password'] ?? ''), client_ip());
+                Auth::startSession($id); $u = Auth::user();
+            }
+            $shopId = Invites::accept($token, $u);
+            $_SESSION['shop_id'] = $shopId;
+            flash('ok', 'Pronto! Você já tem acesso à agenda.');
+            redirect('/painel');
+        } catch (BusinessError $e) { flash('err', $e->getMessage()); redirect('/convite/' . $token); }
+    });
+
     $r->get('/recuperar-senha', fn() => render('forgot', ['title' => 'Recuperar senha']));
     $r->post('/recuperar-senha', function () {
         csrf_check();

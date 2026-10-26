@@ -26,7 +26,7 @@
 
 <div class="card"><h2>Lançamentos</h2>
   <?php if (!$pays): ?><p class="empty">Nenhum lançamento no período.</p><?php endif; ?>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th>Profissional</th><th>Forma</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th>Profissional</th><th>Forma</th><th class="num">Valor</th><th>Situação</th><th><span class="visually-hidden">Ações</span></th></tr></thead><tbody>
   <?php foreach ($pays as $x): $rf = $x['kind'] === 'refund'; ?>
     <tr><td class="nowrap"><?= e(dt_local($x['received_at'] ?? $x['created_at'], $tz, 'd/m H:i')) ?></td><td><?= $rf ? 'Estorno' : 'Pagamento' ?></td><td><?= e($x['customer']) ?></td><td><?= e($x['professional']) ?></td><td><?= e(Finance::METHODS[$x['method']] ?? $x['method']) ?></td>
     <td class="num"><?= e(money(($rf ? -1 : 1) * (int)$x['amount_cents'])) ?></td><td><?= $x['status'] === 'received' ? badge('Recebido', 'green') : badge('Pendente', 'brass') ?></td>

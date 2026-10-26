@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 $cfgFile = sys_get_temp_dir() . '/bf_test_config.php';
 file_put_contents($cfgFile, "<?php return " . var_export(['db' => ['host' => '127.0.0.1', 'port' => 3306, 'name' => 'bf_test', 'user' => 'bf', 'pass' => 'bf'],
-    'app' => ['url' => 'http://localhost', 'mode' => 'demo', 'send_mail' => false, 'webhook_token' => 'tok_test_123', 'cron_key' => 'k']], true) . ";\n");
+    'app' => ['url' => 'http://localhost', 'mode' => 'demo', 'send_mail' => false, 'webhook_token' => 'tok_test_123', 'cron_key' => 'k', 'asaas_base_url' => 'http://127.0.0.1:8091/v3', 'whatsapp_base_url' => 'http://127.0.0.1:8091']], true) . ";\n");
 putenv('BF_CONFIG=' . $cfgFile);
 require_once __DIR__ . '/../app/bootstrap.php';
 mb_internal_encoding('UTF-8');

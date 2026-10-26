@@ -8,6 +8,18 @@
   <?= fld('active', 'Ativo na agenda', (int)$p['active'], ['type' => 'checkbox']) ?>
   <?php if (Ctx::writable($ctx)): ?><button class="btn btn-primary">Salvar</button><?php endif; ?></form>
 
+<?php if (!solo_plan($ctx) && Ctx::can($ctx, 'professionals.manage')): $linked = $p['user_id'] ? DB::one('SELECT name, email FROM users WHERE id = ?', [$p['user_id']]) : null; ?>
+<div class="card"><h2>Acesso ao sistema</h2>
+  <?php if ($linked): ?><p class="mb-2">Acesso de <b><?= e($linked['name']) ?></b> (<?= e($linked['email']) ?>). Essa pessoa vê e gerencia só a agenda de <?= e($p['name']) ?>.</p>
+    <?php if (Ctx::writable($ctx)): ?><?= post_form('/painel/acessos/' . (int)$p['user_id'] . '/remover', '<button class="btn btn-outline-danger btn-sm">Remover acesso</button>', '', 'Remover o acesso desta pessoa? Os atendimentos continuam no histórico.') ?><?php endif; ?>
+  <?php elseif (Ctx::writable($ctx)): ?>
+    <p class="muted small">Convide por e-mail para esta pessoa ter login próprio e ver só a própria agenda.</p>
+    <form method="post" action="<?= e(url('/painel/equipe/' . (int)$p['id'] . '/convite')) ?>"><?= csrf_field() ?>
+      <?= fld('email', 'E-mail da pessoa', old('email'), ['type' => 'email', 'required' => 1]) ?>
+      <div class="field"><label class="form-label" for="f_role">Papel</label><select class="form-select" id="f_role" name="role"><?php foreach (Invites::ROLES as $k => $t): ?><option value="<?= e($k) ?>"><?= e($t) ?></option><?php endforeach; ?></select></div>
+      <button class="btn btn-primary">Criar convite</button></form>
+  <?php endif; ?></div>
+<?php endif; ?>
 <form method="post" action="<?= e(url('/painel/equipe/' . $p['id'] . '/horarios')) ?>" class="card"><?= csrf_field() ?><h2>Horário de trabalho</h2>
   <p class="muted small">Deixe em branco os dias de folga. Use a segunda faixa para intervalos (ex.: 9–12 e 14–18).</p>
   <?php foreach (WEEKDAYS as $wd => $name): $r = $byDay[$wd] ?? []; ?>

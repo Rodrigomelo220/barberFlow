@@ -35,7 +35,7 @@ $faq = [
     <div class="lp-visual" aria-label="Prévia ilustrativa da página de agendamento do <?= e(brand()) ?>" role="img">
       <div class="mock-window">
         <div class="mock-top">
-          <div class="mock-brand"><span class="mock-mark"><?= e(brand_initial()) ?></span><span>Sua página de agendamento</span></div>
+          <div class="mock-brand"><?= brand_mark() ?><span>Sua página de agendamento</span></div>
           <span class="mock-pill"><span class="bi bi-circle-fill" style="font-size:.45rem" aria-hidden="true"></span> Online</span>
         </div>
         <div class="mock-heading">Escolha seu horário</div>

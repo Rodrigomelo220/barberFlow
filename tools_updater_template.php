@@ -39,6 +39,17 @@ try {
     $has = fn(string $t, string $col) => (int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t) . " AND COLUMN_NAME = " . $pdo->quote($col))->fetchColumn() > 0;
     foreach (['logo_path', 'cover_path'] as $col) if (!$has('shops', $col)) { $pdo->exec("ALTER TABLE shops ADD $col VARCHAR(120) NULL"); $log[] = "Banco: coluna shops.$col criada."; }
     if (!$has('shops', 'business_type')) { $pdo->exec("ALTER TABLE shops ADD business_type VARCHAR(20) NOT NULL DEFAULT 'barbearia'"); $log[] = 'Banco: coluna shops.business_type criada.'; }
+    // colunas novas (cobrança real) e tabelas novas (criadas a partir do schema.sql, só se ainda não existirem)
+    $mt = $pdo->query("SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'meta' AND COLUMN_NAME = 'v'")->fetchColumn();
+    if ($mt && strtolower((string)$mt) !== 'text') { $pdo->exec('ALTER TABLE meta MODIFY v TEXT NOT NULL'); $log[] = 'Banco: meta.v ampliada para guardar segredos.'; }
+    if (!$has('subscriptions', 'provider_customer')) { $pdo->exec('ALTER TABLE subscriptions ADD provider_customer VARCHAR(40) NULL'); $log[] = 'Banco: coluna subscriptions.provider_customer criada.'; }
+    if (!$has('billing_charges', 'invoice_url')) { $pdo->exec('ALTER TABLE billing_charges ADD invoice_url VARCHAR(250) NULL'); $log[] = 'Banco: coluna billing_charges.invoice_url criada.'; }
+    if (!$has('outbox', 'params')) { $pdo->exec('ALTER TABLE outbox ADD params VARCHAR(600) NULL'); $log[] = 'Banco: coluna outbox.params criada.'; }
+    foreach (explode("\n-- #\n", (string)file_get_contents($root . '/sql/schema.sql')) as $stmt) {
+        if (!preg_match('/^\s*CREATE TABLE (\w+)/i', $stmt, $m)) continue;
+        $exists = (int)$pdo->query('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ' . $pdo->quote($m[1]))->fetchColumn() > 0;
+        if (!$exists) { $pdo->exec(trim($stmt)); $log[] = "Banco: tabela {$m[1]} criada."; }
+    }
     // ---- planos oficiais (dois planos). Não apaga nada: o plano antigo "equipe" só é desativado.
     $plans = require $root . '/sql/plans.php'; $codes = [];
     foreach ($plans as $p) {

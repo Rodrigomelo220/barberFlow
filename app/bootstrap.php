@@ -2,14 +2,20 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/core.php';
+require_once __DIR__ . '/secure.php';
+require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/billing.php';
+require_once __DIR__ . '/asaas.php';
+require_once __DIR__ . '/whatsapp.php';
 require_once __DIR__ . '/scheduling.php';
 require_once __DIR__ . '/messages.php';
 require_once __DIR__ . '/business.php';
 require_once __DIR__ . '/shop.php';
+require_once __DIR__ . '/invites.php';
 require_once __DIR__ . '/finance.php';
 require_once __DIR__ . '/admin.php';
+require_once __DIR__ . '/diag.php';
 require_once __DIR__ . '/view.php';
 
 date_default_timezone_set('UTC');

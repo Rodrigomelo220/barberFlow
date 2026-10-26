@@ -86,14 +86,71 @@ final class Admin
         });
     }
 
-    public static function saveSystem(int $adminId, string $brand, string $support): void
+    public static function saveSystem(int $adminId, string $brand, string $support, string $entity = '', string $privacyEmail = ''): void
     {
         $brand = trim(preg_replace('/\s+/u', ' ', $brand));
         if (mb_strlen($brand) < 2 || mb_strlen($brand) > 40) throw new BusinessError('O nome do sistema precisa ter de 2 a 40 caracteres.');
         $support = mb_substr(trim($support), 0, 600);
         DB::q("REPLACE INTO meta (k, v) VALUES ('brand_name', ?)", [$brand]);
+        $entity = mb_substr(trim(preg_replace('/\s+/u', ' ', $entity)), 0, 160);
+        $privacyEmail = trim($privacyEmail);
+        if ($privacyEmail !== '' && !filter_var($privacyEmail, FILTER_VALIDATE_EMAIL)) throw new BusinessError('O e-mail de privacidade não parece válido.');
         DB::q("REPLACE INTO meta (k, v) VALUES ('support_contact', ?)", [$support]);
+        DB::q("REPLACE INTO meta (k, v) VALUES ('legal_entity', ?)", [$entity]);
+        DB::q("REPLACE INTO meta (k, v) VALUES ('privacy_email', ?)", [$privacyEmail]);
+        sys_setting('', '', true);   // recarrega o cache
         audit(null, $adminId, 'admin.system_saved', 'meta', null, null, 'platform_admin');
+    }
+
+    public static function saveSmtp(int $adminId, array $in): void
+    {
+        $old = Secrets::get('smtp');
+        $host = trim((string)($in['host'] ?? '')); $port = (int)($in['port'] ?? 0); $sec = (string)($in['security'] ?? 'tls');
+        $fromEmail = trim((string)($in['from_email'] ?? '')); $fromName = mb_substr(trim((string)($in['from_name'] ?? '')), 0, 60);
+        if ($host === '') { Secrets::put('smtp', []); audit(null, $adminId, 'admin.smtp_cleared', 'meta', null, null, 'platform_admin'); return; }   // vazio = desligar
+        if (!preg_match('/^[A-Za-z0-9.-]{3,190}$/', $host)) throw new BusinessError('Servidor SMTP inválido.');
+        if ($port < 1 || $port > 65535) throw new BusinessError('Porta inválida.');
+        if (!in_array($sec, ['tls', 'ssl', 'none'], true)) throw new BusinessError('Criptografia inválida.');
+        if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) throw new BusinessError('E-mail de envio inválido.');
+        $pass = (string)($in['pass'] ?? '');
+        Secrets::put('smtp', ['host' => $host, 'port' => $port, 'security' => $sec, 'user' => trim((string)($in['user'] ?? '')), 'pass' => $pass !== '' ? $pass : (string)($old['pass'] ?? ''),
+            'from_email' => $fromEmail, 'from_name' => $fromName]);
+        audit(null, $adminId, 'admin.smtp_saved', 'meta', null, $host . ':' . $port, 'platform_admin');
+    }
+
+    public static function saveAsaas(int $adminId, array $in): void
+    {
+        $old = Secrets::get('asaas');
+        $env = ($in['env'] ?? '') === 'production' ? 'production' : 'sandbox';
+        $key = trim((string)($in['api_key'] ?? ''));
+        if ($key === '' && !empty($in['clear'])) { Secrets::put('asaas', []); audit(null, $adminId, 'admin.asaas_cleared', 'meta', null, null, 'platform_admin'); return; }
+        if ($key === '') $key = (string)($old['api_key'] ?? '');
+        if ($key === '') throw new BusinessError('Cole a chave da API do Asaas.');
+        if (!preg_match('/^\$?aact_[A-Za-z0-9_=.\-]{10,}$/', $key)) throw new BusinessError('A chave não parece uma chave do Asaas (começa com $aact_).');
+        if ($env === 'production' && !str_contains($key, 'prod')) throw new BusinessError('Para o ambiente de produção use uma chave de produção ($aact_prod_...).');
+        if ($env === 'sandbox' && str_contains($key, 'prod')) throw new BusinessError('Esta é uma chave de produção. Escolha o ambiente de produção ou use uma chave de teste ($aact_hmlg_...).');
+        Secrets::put('asaas', ['api_key' => $key, 'env' => $env]);
+        audit(null, $adminId, 'admin.asaas_saved', 'meta', null, $env, 'platform_admin');
+    }
+
+    public static function saveWhatsApp(int $adminId, array $in): void
+    {
+        $old = Secrets::get('whatsapp');
+        if (!empty($in['clear'])) { Secrets::put('whatsapp', []); audit(null, $adminId, 'admin.whatsapp_cleared', 'meta', null, null, 'platform_admin'); return; }
+        $token = trim((string)($in['token'] ?? '')); if ($token === '') $token = (string)($old['token'] ?? '');
+        $pid = preg_replace('/\D/', '', (string)($in['phone_number_id'] ?? ''));
+        if ($token === '' || strlen($token) < 20 || preg_match('/\s/', $token)) throw new BusinessError('Cole o token de acesso (sem espaços).');
+        if (strlen($pid) < 8 || strlen($pid) > 20) throw new BusinessError('Informe o ID do número de telefone (só números).');
+        $ver = trim((string)($in['api_version'] ?? 'v21.0')); if (!preg_match('/^v\d{1,2}\.\d$/', $ver)) throw new BusinessError('Versão da API inválida (ex.: v21.0).');
+        $lang = trim((string)($in['lang'] ?? 'pt_BR')); if (!preg_match('/^[a-z]{2}(_[A-Z]{2})?$/', $lang)) throw new BusinessError('Idioma inválido (ex.: pt_BR).');
+        $tpl = [];
+        foreach (WhatsApp::KINDS as $k) {
+            $n = trim((string)($in['tpl_' . $k] ?? ''));
+            if (!preg_match('/^[a-z0-9_]{1,100}$/', $n)) throw new BusinessError("Nome do modelo de '$k' inválido (letras minúsculas, números e _).");
+            $tpl[$k] = $n;
+        }
+        Secrets::put('whatsapp', ['token' => $token, 'phone_number_id' => $pid, 'api_version' => $ver, 'lang' => $lang, 'templates' => $tpl]);
+        audit(null, $adminId, 'admin.whatsapp_saved', 'meta', null, null, 'platform_admin');
     }
 
     public static function addNote(int $adminId, int $shopId, string $note): void

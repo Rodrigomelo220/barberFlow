@@ -1,22 +1,6 @@
 <?php
 declare(strict_types=1);
 
-final class Mailer
-{
-    /** Em hospedagem gratuita mail() costuma estar desativado: sempre registra em storage/mail.log também. */
-    public static function send(string $to, string $subject, string $body): void
-    {
-        $dir = BF_ROOT . '/storage';
-        if (is_dir($dir) && is_writable($dir)) {
-            @file_put_contents($dir . '/mail.log', '[' . date('c') . "] Para: $to | $subject\n$body\n---\n", FILE_APPEND | LOCK_EX);
-        }
-        if (cfg('app.send_mail', false)) {
-            $from = cfg('app.mail_from', brand() . ' <nao-responda@localhost>');
-            @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, "From: $from\r\nContent-Type: text/plain; charset=UTF-8");
-        }
-    }
-}
-
 final class Perm
 {
     private const MAP = [

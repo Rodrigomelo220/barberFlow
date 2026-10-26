@@ -288,6 +288,21 @@ function register_panel_routes(Router $r): void
             return 'Profissional atualizado.';
         });
     });
+    $r->post('/painel/equipe/{id}/convite', function ($id) {
+        $ctx = panel();
+        pact($ctx, 'professionals.manage', '/painel/equipe/' . (int)$id, function () use ($ctx, $id) {
+            $link = Invites::create($ctx['shop_id'], (int)$ctx['user']['id'], input('email'), input('role') ?: 'barber', (int)$id);
+            return 'Convite criado' . (Mailer::configured() ? ' e enviado por e-mail' : '') . '. Link (válido por 7 dias): ' . $link;
+        });
+    });
+    $r->post('/painel/convites/{id}/cancelar', function ($id) {
+        $ctx = panel();
+        pact($ctx, 'professionals.manage', '/painel/equipe', function () use ($ctx, $id) { Invites::cancel($ctx['shop_id'], (int)$ctx['user']['id'], (int)$id); return 'Convite cancelado.'; });
+    });
+    $r->post('/painel/acessos/{uid}/remover', function ($uid) {
+        $ctx = panel();
+        pact($ctx, 'professionals.manage', '/painel/equipe', function () use ($ctx, $uid) { Invites::revoke($ctx['shop_id'], (int)$ctx['user']['id'], (int)$uid); return 'Acesso removido.'; });
+    });
     $r->post('/painel/equipe/{id}/horarios', function ($id) {
         $ctx = panel();
         pact($ctx, 'professionals.manage', '/painel/equipe/' . (int)$id, function () use ($ctx, $id) {
@@ -344,9 +359,17 @@ function register_panel_routes(Router $r): void
     // ------------------------------------------------------------ mensagens (simuladas)
     $r->get('/painel/mensagens', function () {
         $ctx = panel(); Ctx::need($ctx, 'messages.view');
-        $rows = DB::all('SELECT o.id, o.kind, o.phone, o.body, o.status, o.send_at, o.detail FROM outbox o WHERE o.shop_id = ? ORDER BY o.id DESC LIMIT 100', [$ctx['shop_id']]);
+        $rows = DB::all("SELECT o.id, o.kind, o.phone, o.body, o.status, o.send_at, o.detail FROM outbox o WHERE o.shop_id = ? ORDER BY (o.status = 'manual') DESC, o.id DESC LIMIT 100", [$ctx['shop_id']]);
         $used = (int)DB::val("SELECT COALESCE(SUM(cnt),0) FROM usage_counters WHERE shop_id = ? AND metric = 'messages' AND period = ?", [$ctx['shop_id'], now_utc()->setTimezone(new DateTimeZone($ctx['tz']))->format('Y-m')]);
-        render('panel/messages', ['ctx' => $ctx, 'rows' => $rows, 'used' => $used, 'title' => 'Mensagens']);
+        render('panel/messages', ['ctx' => $ctx, 'rows' => $rows, 'used' => $used, 'demo' => cfg('app.mode', 'demo') === 'demo', 'api' => WhatsApp::configured(), 'title' => 'Mensagens']);
+    });
+    $r->post('/painel/mensagens/{id}/enviada', function ($id) {
+        $ctx = panel();
+        pact($ctx, 'messages.view', '/painel/mensagens', function () use ($ctx, $id) {
+            $n = DB::exec("UPDATE outbox SET status = 'sent', sent_at = ?, detail = 'enviada manualmente' WHERE id = ? AND shop_id = ? AND status IN ('manual','queued','simulated')", [dt_db(now_utc()), (int)$id, $ctx['shop_id']]);
+            if (!$n) throw new BusinessError('Mensagem não encontrada.', 'not_found', 404);
+            return 'Marcada como enviada.';
+        });
     });
 
     // ------------------------------------------------------------ configurações
@@ -387,8 +410,8 @@ function register_panel_routes(Router $r): void
     // ------------------------------------------------------------ assinatura e checkout simulado
     $r->get('/painel/assinatura', function () {
         $ctx = panel(true);
-        $charges = DB::all('SELECT status, amount_cents, due_date, received_at, provider_ref FROM billing_charges WHERE shop_id = ? ORDER BY id DESC LIMIT 12', [$ctx['shop_id']]);
-        render('panel/subscription', ['ctx' => $ctx, 'plans' => Billing::publicPlans(), 'charges' => $charges, 'demo' => cfg('app.mode', 'demo') === 'demo', 'title' => 'Assinatura']);
+        $charges = DB::all('SELECT status, amount_cents, due_date, received_at, provider_ref, invoice_url FROM billing_charges WHERE shop_id = ? ORDER BY id DESC LIMIT 12', [$ctx['shop_id']]);
+        render('panel/subscription', ['ctx' => $ctx, 'plans' => Billing::publicPlans(), 'charges' => $charges, 'demo' => cfg('app.mode', 'demo') === 'demo', 'asaas' => Asaas::configured() && cfg('app.mode', 'demo') !== 'demo', 'title' => 'Assinatura']);
     });
     $subAct = function (string $path, callable $fn) {
         $ctx = panel(true);
@@ -398,6 +421,21 @@ function register_panel_routes(Router $r): void
         $subAct('/painel/assinatura', function ($ctx) {
             $res = Billing::start($ctx['shop_id'], (int)$ctx['user']['id'], input('plan'), input_bool('trial'));
             return $res['status'] === 'trialing' ? ['Período de teste iniciado.', '/painel'] : ['Plano escolhido. Veja abaixo como concluir o pagamento.', cfg('app.mode', 'demo') === 'demo' ? '/dev/pagamento' : '/painel/assinatura'];
+        });
+    });
+    // Cobrança real (Asaas): coleta CPF/CNPJ, cria a assinatura recorrente e leva o cliente à fatura. Só o webhook ativa.
+    $r->get('/painel/assinatura/assinar', function () {
+        $ctx = panel(true);
+        if (!Asaas::configured() || cfg('app.mode', 'demo') === 'demo') render_error(404, 'Página não encontrada', 'A cobrança automática não está ativa.');
+        $plan = DB::one('SELECT * FROM plans WHERE code = ? AND is_active = 1 AND is_public = 1', [input('plano')]) ?? render_error(404, 'Plano não encontrado', 'Volte e escolha um plano.');
+        render('panel/subscribe', ['ctx' => $ctx, 'plan' => $plan, 'title' => 'Assinar']);
+    });
+    $r->post('/painel/assinatura/assinar', function () use ($subAct) {
+        $subAct('/painel/assinatura', function ($ctx) {
+            if (!Asaas::configured() || cfg('app.mode', 'demo') === 'demo') throw new BusinessError('A cobrança automática não está ativa.');
+            if (!rate_limit('subscribe:' . $ctx['shop_id'], 6, 3600)) throw new BusinessError('Muitas tentativas. Tente mais tarde.', 'rate_limited', 429);
+            Asaas::subscribe($ctx['shop_id'], (int)$ctx['user']['id'], input('plan'), input('name'), (string)$ctx['user']['email'], input('doc'));
+            return ['Assinatura criada. Abra a cobrança abaixo para pagar; a ativação é automática assim que o pagamento for confirmado.', '/painel/assinatura'];
         });
     });
     $r->post('/painel/assinatura/plano', function () use ($subAct) {

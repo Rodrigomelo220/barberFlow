@@ -12,6 +12,7 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
   <?php if ($sub && $sub['current_period_end'] && in_array($st, ['active', 'past_due'], true)): ?><p>Período pago até <b><?= e(dt_local($sub['current_period_end'], $tz, 'd/m/Y')) ?></b><?= (int)$sub['cancel_at_period_end'] ? ' — <b>cancelamento agendado</b>' : '' ?>.</p><?php endif; ?>
   <?php if ($st === 'past_due' && $sub['grace_until']): ?><p>Carência até <b><?= e(dt_local($sub['grace_until'], $tz, 'd/m/Y')) ?></b>; depois, 10 dias em modo leitura. Seus dados não são apagados.</p><?php endif; ?>
   <div class="actions">
+  <?php if (!empty($asaas) && $st === 'trialing' && $acc['level'] === 'full' && $plan): ?><a class="btn btn-danger" href="<?= e(url('/painel/assinatura/assinar?plano=' . rawurlencode($plan['code']))) ?>">Assinar agora</a><?php endif; ?>
   <?php if ($sub && $sub['provider_ref'] && in_array($st, ['incomplete', 'trialing', 'past_due'], true) && $demo): ?><a class="btn btn-danger" href="<?= e(url('/dev/pagamento')) ?>">Ir para o pagamento (simulado)</a><?php endif; ?>
   <?php if ($st === 'active' && !(int)$sub['cancel_at_period_end']): ?><?= post_form('/painel/assinatura/cancelar', '<button class="btn btn-outline-danger">Cancelar assinatura</button>', '', 'Cancelar no fim do período pago?') ?><?php endif; ?>
   <?php if ($st === 'active' && (int)$sub['cancel_at_period_end']): ?><?= post_form('/painel/assinatura/retomar', '<button class="btn btn-outline-dark">Desfazer cancelamento</button>') ?><?php endif; ?>
@@ -25,7 +26,9 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
     <div class="choice" style="cursor:default"><span class="t"><b><?= e($p['name']) ?></b> <?= $cur ? badge('atual', 'blue') : '' ?><br><span class="muted small"><?= e(implode(' · ', decode_list($p['highlights']))) ?></span></span><span class="p"><?= e(money((int)$p['price_cents'])) ?></span>
     <span>
       <?php if ($canStart): ?>
+        <?php if (!empty($asaas)): ?><a class="btn btn-sm btn-primary" href="<?= e(url('/painel/assinatura/assinar?plano=' . rawurlencode($p['code']))) ?>">Assinar</a><?php else: ?>
         <?= post_form('/painel/assinatura/iniciar', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><button class="btn btn-sm btn-primary">' . ($demo ? 'Pagar' : 'Assinar') . '</button>', 'inline') ?>
+        <?php endif; ?>
         <?php if ((int)$p['trial_days'] > 0 && !$trialUsed): ?><?= post_form('/painel/assinatura/iniciar', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><input type="hidden" name="trial" value="1"><button class="btn btn-sm btn-outline-dark">Testar ' . (int)$p['trial_days'] . ' dias</button>', 'inline') ?><?php endif; ?>
       <?php elseif (!$cur && in_array($st, ['active', 'trialing'], true)): ?>
         <?= post_form('/painel/assinatura/plano', '<input type="hidden" name="plan" value="' . e($p['code']) . '"><button class="btn btn-sm btn-outline-dark">Trocar</button>', 'inline', 'Trocar para o plano ' . $p['name'] . '?') ?>
@@ -34,6 +37,10 @@ $trialUsed = $sub && $sub['trial_ends_at'] !== null;
   <?php if ($st === 'active'): ?><p class="hint">A troca vale a partir de agora; a nova cobrança acompanha o próximo ciclo.</p><?php endif; ?>
 </div>
 
+<?php $pend = null; foreach ($charges as $c) if (in_array($c['status'], ['pending', 'overdue'], true) && !empty($c['invoice_url'])) { $pend = $c; break; } ?>
+<?php if ($pend): ?><div class="card"><h2>Cobrança em aberto</h2><p class="mb-2"><?= e(money((int)$pend['amount_cents'])) ?> · vencimento <?= $pend['due_date'] ? e(date('d/m/Y', strtotime($pend['due_date']))) : '—' ?></p>
+  <a class="btn btn-danger" href="<?= e($pend['invoice_url']) ?>" target="_blank" rel="noopener noreferrer">Pagar agora (Pix, boleto ou cartão)</a>
+  <p class="muted small mt-2 mb-0">A assinatura é ativada sozinha quando o pagamento for confirmado.</p></div><?php endif; ?>
 <?php if (!$demo && $sub && in_array($st, ['incomplete', 'past_due', 'canceled', 'suspended'], true) || (!$demo && $st === 'trialing')): ?>
 <div class="card"><h2>Como pagar</h2>
   <?php $how = sys_setting('support_contact'); ?>

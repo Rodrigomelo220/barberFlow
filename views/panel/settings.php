@@ -9,7 +9,7 @@
     <?php if (Ctx::writable($ctx)): ?>
     <form method="post" enctype="multipart/form-data" action="<?= e(url('/painel/configuracoes/imagem')) ?>" class="img-form"><?= csrf_field() ?>
       <input type="hidden" name="kind" value="<?= $k ?>">
-      <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="form-control" required>
+      <input type="file" name="image" aria-label="Escolher arquivo de <?= strtolower(e($lbl)) ?>" accept="image/jpeg,image/png,image/webp" class="form-control" required>
       <p class="small muted"><?= e($hint) ?></p>
       <button class="btn btn-primary">Enviar <?= strtolower(e($lbl)) ?></button>
     </form>

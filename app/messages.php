@@ -2,9 +2,10 @@
 declare(strict_types=1);
 
 /**
- * Mensagens ao cliente. NESTA VERSÃO o envio é SIMULADO: as mensagens entram numa caixa de saída (tabela outbox) e são
- * marcadas como "simulada" quando chega a hora; nada é enviado ao WhatsApp. A integração oficial (Cloud API) exige
- * conexões de saída que a hospedagem gratuita não permite — veja o README.
+ * Mensagens ao cliente. Entram na caixa de saída (tabela outbox) e, na hora marcada:
+ *  - modo teste (demo): ficam "simulada", nada é enviado;
+ *  - modo produção com a API do WhatsApp configurada: são enviadas por modelo aprovado (WhatsApp::send);
+ *  - modo produção sem API: ficam "manual" para o dono enviar com um toque (link wa.me) e marcar como enviada.
  */
 final class Messages
 {
@@ -15,11 +16,16 @@ final class Messages
             FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE a.id = ?", [$apptId]);
     }
 
-    private static function text(string $kind, array $shop, array $a): string
+    /** Variáveis dos modelos do WhatsApp: [primeiro nome, negócio, data e hora, serviços]. */
+    private static function params(array $shop, array $a): array
     {
         $tz = $shop['timezone'];
-        $first = explode(' ', trim($a['customer']))[0] ?? '';
-        $when = dt_local($a['starts_at'], $tz, 'd/m') . ' às ' . dt_local($a['starts_at'], $tz, 'H:i');
+        return [explode(' ', trim($a['customer']))[0] ?? '', (string)$shop['name'], dt_local($a['starts_at'], $tz, 'd/m') . ' às ' . dt_local($a['starts_at'], $tz, 'H:i'), (string)($a['services'] ?? '')];
+    }
+
+    private static function text(string $kind, array $shop, array $a): string
+    {
+        [$first, , $when] = self::params($shop, $a);
         return match ($kind) {
             'confirmacao' => "Olá, $first! Seu horário na {$shop['name']} está confirmado para $when ({$a['services']}).",
             'lembrete' => "Olá, $first! Lembrete: você tem horário na {$shop['name']} em $when ({$a['services']}).",
@@ -33,7 +39,7 @@ final class Messages
     {
         if (!(int)$a['whatsapp_optin'] || $a['anonymized_at']) return;       // só com consentimento
         DB::insert('outbox', ['shop_id' => $shop['id'], 'appointment_id' => $a['id'], 'customer_id' => $a['customer_id'], 'kind' => $kind, 'phone' => $a['phone'],
-            'body' => self::text($kind, $shop, $a), 'send_at' => dt_db($sendAt), 'status' => 'queued', 'created_at' => dt_db($now)]);
+            'body' => self::text($kind, $shop, $a), 'params' => json_encode(self::params($shop, $a), JSON_UNESCAPED_UNICODE), 'send_at' => dt_db($sendAt), 'status' => 'queued', 'created_at' => dt_db($now)]);
     }
 
     public static function onBooked(array $shop, int $apptId, DateTimeImmutable $now): void
@@ -77,9 +83,9 @@ final class Messages
     {
         $now ??= now_utc();
         $rows = DB::all("SELECT id FROM outbox WHERE status = 'queued' AND send_at <= ? ORDER BY send_at LIMIT " . (int)$limit, [dt_db($now)]);
-        $n = 0;
+        $n = 0; $send = [];
         foreach ($rows as $r) {
-            DB::tx(function () use ($r, $now, &$n) {
+            DB::tx(function () use ($r, $now, &$n, &$send) {
                 $m = DB::one("SELECT * FROM outbox WHERE id = ? AND status = 'queued' FOR UPDATE", [$r['id']]);   // outro processo pode ter pegado
                 if (!$m) return;
                 $skip = function (string $why) use ($m) { DB::exec("UPDATE outbox SET status = 'skipped', detail = ? WHERE id = ?", [$why, $m['id']]); };
@@ -97,9 +103,25 @@ final class Messages
                 $cnt = (int)DB::val("SELECT cnt FROM usage_counters WHERE shop_id = ? AND period = ? AND metric = 'messages' FOR UPDATE", [$shop['id'], $period]);
                 if ($cnt >= $limitM) { $skip('limite mensal de mensagens do plano atingido'); return; }
                 DB::q("INSERT INTO usage_counters (shop_id, period, metric, cnt) VALUES (?, ?, 'messages', 1) ON DUPLICATE KEY UPDATE cnt = cnt + 1", [$shop['id'], $period]);
-                DB::exec("UPDATE outbox SET status = 'simulated', sent_at = ?, detail = 'simulada: nada foi enviado ao WhatsApp' WHERE id = ?", [dt_db($now), $m['id']]);
+                if (cfg('app.mode', 'demo') === 'demo') {
+                    DB::exec("UPDATE outbox SET status = 'simulated', sent_at = ?, detail = 'simulada: nada foi enviado ao WhatsApp' WHERE id = ?", [dt_db($now), $m['id']]);
+                } elseif (WhatsApp::configured()) {
+                    DB::exec("UPDATE outbox SET status = 'sending' WHERE id = ?", [$m['id']]);   // a chamada à API acontece fora da transação
+                    $send[] = $m;
+                } else {
+                    DB::exec("UPDATE outbox SET status = 'manual', detail = 'envie pelo WhatsApp (botão ao lado)' WHERE id = ?", [$m['id']]);
+                }
                 $n++;
             });
+        }
+        foreach ($send as $m) {
+            $err = WhatsApp::send((string)$m['phone'], (string)$m['kind'], (array)json_decode((string)$m['params'], true));
+            if ($err === null) { DB::exec("UPDATE outbox SET status = 'sent', sent_at = ?, detail = NULL WHERE id = ?", [dt_db($now), $m['id']]); continue; }
+            $shop = Scheduling::shop((int)$m['shop_id']);
+            $period = $now->setTimezone(new DateTimeZone($shop['timezone']))->format('Y-m');
+            DB::exec("UPDATE usage_counters SET cnt = GREATEST(cnt - 1, 0) WHERE shop_id = ? AND period = ? AND metric = 'messages'", [$m['shop_id'], $period]);   // falha não consome o limite
+            DB::exec("UPDATE outbox SET status = 'failed', detail = ? WHERE id = ?", [mb_substr($err, 0, 190), $m['id']]);
+            $n--;
         }
         return $n;
     }

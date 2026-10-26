@@ -39,13 +39,62 @@ function register_admin_routes(Router $r): void
             throw new BusinessError('Ação inválida.');
         });
     });
+    $r->get('/admin/diagnostico', function () {
+        $u = admin_user();
+        render('admin/diag', ['u' => $u, 'title' => 'Diagnóstico', 'groups' => Diag::run(false)], 'layout_admin');
+    });
+    $r->post('/admin/diagnostico', function () {
+        $u = admin_user(); csrf_check();
+        render('admin/diag', ['u' => $u, 'title' => 'Diagnóstico', 'groups' => Diag::run(true)], 'layout_admin');
+    });
     $r->get('/admin/sistema', function () {
         $u = admin_user();
         render('admin/system', ['u' => $u, 'title' => 'Sistema'], 'layout_admin');
     });
     $r->post('/admin/sistema', function () {
         $u = admin_user();
-        aact($u, '/admin/sistema', function ($u) { Admin::saveSystem((int)$u['id'], input('brand'), input('support')); return 'Configurações salvas.'; });
+        aact($u, '/admin/sistema', function ($u) { Admin::saveSystem((int)$u['id'], input('brand'), input('support'), input('entity'), input('privacy_email')); return 'Configurações salvas.'; });
+    });
+    $r->post('/admin/sistema/email', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) { Admin::saveSmtp((int)$u['id'], $_POST); return Mailer::configured() ? 'E-mail salvo. Envie um e-mail de teste para conferir.' : 'Envio de e-mail desligado.'; });
+    });
+    $r->post('/admin/sistema/email-teste', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) {
+            if (!Mailer::configured()) throw new BusinessError('Configure o e-mail primeiro.');
+            if (!rate_limit('mailtest:' . $u['id'], 5, 600)) throw new BusinessError('Muitos testes seguidos. Aguarde alguns minutos.', 'rate_limited', 429);
+            $err = Mailer::send((string)$u['email'], 'Teste de e-mail — ' . brand(), "Se você recebeu esta mensagem, o envio de e-mail está funcionando.\n");
+            if ($err !== null) throw new BusinessError('Não consegui enviar: ' . $err);
+            return 'E-mail de teste enviado para ' . $u['email'] . '. Confira a caixa de entrada e o spam.';
+        });
+    });
+    $r->post('/admin/sistema/asaas', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) { Admin::saveAsaas((int)$u['id'], $_POST); return Asaas::configured() ? 'Chave salva. Use "Testar conexão".' : 'Cobrança automática desligada.'; });
+    });
+    $r->post('/admin/sistema/asaas-teste', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) {
+            Asaas::call('GET', '/customers?limit=1');
+            return 'Conexão com o Asaas funcionando (' . (Asaas::env() === 'production' ? 'produção' : 'teste') . ').';
+        });
+    });
+    $r->post('/admin/sistema/whatsapp', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) { Admin::saveWhatsApp((int)$u['id'], $_POST); return WhatsApp::configured() ? 'WhatsApp salvo. Envie uma mensagem de teste.' : 'Envio automático pelo WhatsApp desligado.'; });
+    });
+    $r->post('/admin/sistema/whatsapp-teste', function () {
+        $u = admin_user();
+        aact($u, '/admin/sistema', function ($u) {
+            if (!WhatsApp::configured()) throw new BusinessError('Configure o WhatsApp primeiro.');
+            if (!rate_limit('watest:' . $u['id'], 5, 600)) throw new BusinessError('Muitos testes seguidos. Aguarde alguns minutos.', 'rate_limited', 429);
+            $to = preg_replace('/\D/', '', input('to')); if (strlen($to) < 10 || strlen($to) > 13) throw new BusinessError('Informe o número com DDD (ex.: 11999998888).');
+            if (strlen($to) <= 11) $to = '55' . $to;
+            $err = WhatsApp::send($to, 'confirmacao', ['Teste', brand(), 'hoje às 10:00', 'Serviço de teste']);
+            if ($err !== null) throw new BusinessError('A API recusou: ' . $err);
+            return 'Mensagem de teste enviada para ' . $to . '.';
+        });
     });
     $r->get('/admin/administradores', function () {
         $u = admin_user();

@@ -100,10 +100,19 @@ final class Billing
             }
             audit($shopId, $userId, 'billing.canceled', 'subscription', $sub['id']);
         });
+        self::remote(fn() => Asaas::cancel((string)DB::val('SELECT provider_ref FROM subscriptions WHERE shop_id = ?', [$shopId])), 'cancelar recorrência');
+    }
+
+    /** Chamada ao provedor depois que a mudança local já foi gravada: falha de rede não desfaz o que o cliente pediu; fica no log. */
+    private static function remote(callable $fn, string $what): void
+    {
+        try { $fn(); } catch (BusinessError $e) { error_log("billing: falha ao $what no provedor: " . $e->getMessage()); }
     }
 
     public static function resume(int $shopId, int $userId): void
     {
+        $ref = (string)DB::val('SELECT provider_ref FROM subscriptions WHERE shop_id = ?', [$shopId]);
+        if (Asaas::configured() && str_starts_with($ref, 'sub_')) throw new BusinessError('A recorrência já foi encerrada no provedor de cobrança. Depois do fim do período pago, assine de novo em Planos.', 'resume_unavailable');
         $n = DB::exec("UPDATE subscriptions SET cancel_at_period_end = 0, canceled_at = NULL WHERE shop_id = ? AND status = 'active' AND cancel_at_period_end = 1", [$shopId]);
         if (!$n) throw new BusinessError('Não há cancelamento agendado para desfazer.');
         audit($shopId, $userId, 'billing.resumed', 'subscription');
@@ -123,6 +132,8 @@ final class Billing
             DB::exec('UPDATE subscriptions SET plan_id = ?, price_cents = ? WHERE id = ?', [$plan['id'], $plan['price_cents'], $sub['id']]);
             audit($shopId, $userId, 'billing.plan_changed', 'subscription', $sub['id'], $planCode);
         });
+        $row = DB::one('SELECT provider_ref, price_cents FROM subscriptions WHERE shop_id = ?', [$shopId]);
+        if ($row && !empty($row['provider_ref'])) self::remote(fn() => Asaas::updateValue((string)$row['provider_ref'], (int)$row['price_cents']), 'atualizar valor');
     }
 
     // ------------------------------------------------------------ webhook (provedor simulado ou real no formato Asaas)
@@ -185,6 +196,13 @@ final class Billing
         return self::process($eventId);
     }
 
+    /** Só aceita link https da fatura (nunca javascript: etc.). */
+    private static function invoiceUrl(array $p): ?string
+    {
+        $u = $p['invoiceUrl'] ?? null;
+        return is_string($u) && strlen($u) <= 250 && preg_match('#^https://#i', $u) ? $u : null;
+    }
+
     private static function apply(string $type, array $j): string
     {
         $now = now_utc();
@@ -192,7 +210,13 @@ final class Billing
             $ref = $j['subscription']['id'] ?? null;
             $sub = $ref ? DB::one('SELECT * FROM subscriptions WHERE provider_ref = ? FOR UPDATE', [$ref]) : null;
             if (!$sub) return 'unmatched';
-            DB::exec("UPDATE subscriptions SET status='canceled', canceled_at=COALESCE(canceled_at, ?) WHERE id = ?", [dt_db($now), $sub['id']]);
+            $pe = $sub['current_period_end'] ? dt_from_db($sub['current_period_end']) : null;
+            if ($sub['status'] === 'active' && $pe && $pe > $now) {
+                // recorrência encerrada, mas o período já pago continua: cancela só no fim dele
+                DB::exec('UPDATE subscriptions SET cancel_at_period_end = 1, canceled_at = COALESCE(canceled_at, ?) WHERE id = ?', [dt_db($now), $sub['id']]);
+            } else {
+                DB::exec("UPDATE subscriptions SET status='canceled', canceled_at=COALESCE(canceled_at, ?) WHERE id = ?", [dt_db($now), $sub['id']]);
+            }
             audit((int)$sub['shop_id'], null, 'billing.provider_canceled', 'subscription', $sub['id'], null, 'provider');
             return 'applied';
         }
@@ -208,9 +232,10 @@ final class Billing
 
         $ch = DB::one('SELECT * FROM billing_charges WHERE provider_ref = ? FOR UPDATE', [(string)$p['id']]);
         if (!$ch) {
-            DB::insert('billing_charges', ['shop_id' => $sub['shop_id'], 'subscription_id' => $sub['id'], 'provider_ref' => (string)$p['id'], 'status' => $target, 'amount_cents' => $amount, 'due_date' => $due, 'received_at' => $target === 'received' ? dt_db($now) : null, 'created_at' => dt_db($now)]);
+            DB::insert('billing_charges', ['shop_id' => $sub['shop_id'], 'subscription_id' => $sub['id'], 'provider_ref' => (string)$p['id'], 'status' => $target, 'amount_cents' => $amount, 'due_date' => $due, 'invoice_url' => self::invoiceUrl($p), 'received_at' => $target === 'received' ? dt_db($now) : null, 'created_at' => dt_db($now)]);
             $changed = true;
         } else {
+            if (empty($ch['invoice_url']) && ($u = self::invoiceUrl($p))) DB::exec('UPDATE billing_charges SET invoice_url = ? WHERE id = ?', [$u, $ch['id']]);
             // evento atrasado/fora de ordem não regride o estado
             $changed = self::RANK[$target] > self::RANK[$ch['status']];
             if ($changed) DB::exec('UPDATE billing_charges SET status = ?, received_at = IF(? = \'received\', ?, received_at) WHERE id = ?', [$target, $target, dt_db($now), $ch['id']]);

@@ -16,3 +16,11 @@
   <div class="between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span><span class="dot" style="background:<?= e($p['color']) ?>"></span><a href="<?= e(url('/painel/equipe/' . $p['id'])) ?>"><b><?= e($p['name']) ?></b></a> <?= (int)$p['active'] ? '' : badge('inativo') ?></span>
   <a class="btn btn-sm btn-outline-dark" href="<?= e(url('/painel/equipe/' . $p['id'])) ?>">Editar</a></div>
 <?php endforeach; ?></div>
+<?php if (!$solo && Ctx::can($ctx, 'professionals.manage')): $mem = Invites::members($ctx['shop_id']); $pend = Invites::pending($ctx['shop_id']); ?>
+<div class="card"><h2>Quem tem acesso ao sistema</h2>
+  <?php foreach ($mem as $m): ?><div class="between" style="padding:8px 0;border-bottom:1px solid var(--bf-line)"><span><b><?= e($m['name']) ?></b> <span class="muted small"><?= e($m['email']) ?> · <?= e(['owner' => 'dono', 'manager' => 'gerente', 'barber' => 'atendente'][$m['role']] ?? $m['role']) ?><?= $m['professional'] ? ' · agenda: ' . e($m['professional']) : '' ?></span></span>
+    <?php if ($m['role'] !== 'owner' && (int)$m['id'] !== (int)$ctx['user']['id'] && Ctx::writable($ctx)): ?><?= post_form('/painel/acessos/' . (int)$m['id'] . '/remover', '<button class="btn btn-sm btn-outline-danger">Remover</button>', 'inline', 'Remover o acesso desta pessoa?') ?><?php endif; ?></div><?php endforeach; ?>
+  <?php foreach ($pend as $i): ?><div class="between" style="padding:8px 0;border-bottom:1px solid var(--bf-line)"><span><?= e($i['email']) ?> <?= badge('convite pendente', 'brass') ?> <span class="muted small">até <?= e(dt_local($i['expires_at'], $ctx['tz'], 'd/m')) ?></span></span>
+    <?php if (Ctx::writable($ctx)): ?><?= post_form('/painel/convites/' . (int)$i['id'] . '/cancelar', '<button class="btn btn-sm btn-outline-dark">Cancelar</button>', 'inline') ?><?php endif; ?></div><?php endforeach; ?>
+  <p class="muted small mt-2 mb-0">Para convidar alguém, abra o profissional abaixo e use “Acesso ao sistema”.</p></div>
+<?php endif; ?>

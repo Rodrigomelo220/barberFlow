@@ -7,7 +7,9 @@ Agenda online para barbearias, salões de beleza, design de sobrancelha, manicur
 ## Vender (modo produção)
 - No instalador escolha **Produção**: some o checkout simulado e o botão de dados de exemplo.
 - Cobrança **manual**: em Administração → Sistema escreva como o cliente paga (Pix etc.). Quando o pagamento chegar, abra o negócio em Administração → Negócios e use **Registrar pagamento**: a assinatura fica ativa por mais 1 mês (idempotente e auditado). Sem pagamento, o acesso segue a regra de carência → modo leitura, sem apagar dados.
-- Ainda **não** são reais: cobrança automática (Asaas), WhatsApp e e-mail. Não prometa lembretes automáticos até conectar.
+- Integrações (Admin → Sistema): **e-mail SMTP**, **cobrança Asaas** (assinatura recorrente + webhook) e **WhatsApp** (botão de um toque, ou Cloud API com modelos aprovados). Estão implementadas e testadas contra servidores simulados; **só valem de verdade depois que você testar com suas contas** (Asaas sandbox, SMTP, Meta). Sem elas, o sistema segue funcionando com Pix manual e envio manual no WhatsApp.
+- **Equipe**: o dono convida atendentes por link (plano Profissional); cada um entra com login próprio e vê só a própria agenda.
+- Guia completo de servidor, cron, HTTPS, Asaas, backup: **DEPLOY.md**. Diagnóstico: Admin → Diagnóstico. Backup: `php backup.php`.
 - Servidor próprio: PHP 8.0+, MySQL/MariaDB, HTTPS e um cron chamando `cron.php?key=SUA_CHAVE` a cada 5 minutos (a chave está no `config.php`).
 
 ## Instalar no InfinityFree

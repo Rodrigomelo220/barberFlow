@@ -13,6 +13,7 @@ function cfg(?string $path = null, $default = null)
         $c = is_file($file) ? (require $file) : [];
     }
     if ($path === null) return $c;
+    if (isset($GLOBALS['BF_CFG_TEST']) && array_key_exists($path, $GLOBALS['BF_CFG_TEST'])) return $GLOBALS['BF_CFG_TEST'][$path];   // só os testes usam
     $v = $c;
     foreach (explode('.', $path) as $p) {
         if (!is_array($v) || !array_key_exists($p, $v)) return $default;
@@ -129,12 +130,13 @@ function base_path(): string
 }
 function url(string $path = '/'): string { return base_path() . $path; }
 /** Ajuste do sistema guardado na tabela meta (nome do sistema, instruções de pagamento). Nunca derruba a página se o banco não responder. */
-function sys_setting(string $k, string $default = ''): string
+function sys_setting(string $k, string $default = '', bool $reset = false): string
 {
     static $cache = null;
+    if ($reset) $cache = null;
     if ($cache === null) {
         $cache = [];
-        try { foreach (DB::all("SELECT k, v FROM meta WHERE k IN ('brand_name','support_contact')") as $r) $cache[$r['k']] = (string)$r['v']; } catch (Throwable $e) { /* sem banco ainda (instalador) */ }
+        try { foreach (DB::all("SELECT k, v FROM meta WHERE k IN ('brand_name','support_contact','legal_entity','privacy_email')") as $r) $cache[$r['k']] = (string)$r['v']; } catch (Throwable $e) { /* sem banco ainda (instalador) */ }
     }
     return isset($cache[$k]) && $cache[$k] !== '' ? $cache[$k] : $default;
 }

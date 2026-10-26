@@ -63,6 +63,22 @@ CREATE TABLE shop_members (
   CONSTRAINT sm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 -- #
+CREATE TABLE staff_invites (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  shop_id INT UNSIGNED NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  role VARCHAR(10) NOT NULL DEFAULT 'barber',
+  professional_id INT UNSIGNED NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  accepted_at DATETIME NULL,
+  created_by INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY si_token (token_hash),
+  KEY si_shop (shop_id),
+  CONSTRAINT si_shop_fk FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+-- #
 CREATE TABLE subscriptions (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   shop_id INT UNSIGNED NOT NULL,
@@ -75,6 +91,7 @@ CREATE TABLE subscriptions (
   cancel_at_period_end TINYINT(1) NOT NULL DEFAULT 0,
   canceled_at DATETIME NULL,
   provider_ref VARCHAR(80) NULL,
+  provider_customer VARCHAR(40) NULL,
   created_at DATETIME NOT NULL,
   UNIQUE KEY sub_shop (shop_id),
   CONSTRAINT sub_shop_fk FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
@@ -90,6 +107,7 @@ CREATE TABLE billing_charges (
   amount_cents INT NOT NULL,
   due_date DATE NULL,
   received_at DATETIME NULL,
+  invoice_url VARCHAR(250) NULL,
   created_at DATETIME NOT NULL,
   UNIQUE KEY bc_ref (provider_ref),
   KEY bc_shop (shop_id),
@@ -263,6 +281,7 @@ CREATE TABLE outbox (
   kind VARCHAR(16) NOT NULL,
   phone VARCHAR(20) NOT NULL,
   body VARCHAR(1000) NOT NULL,
+  params VARCHAR(600) NULL,
   send_at DATETIME NOT NULL,
   status VARCHAR(12) NOT NULL DEFAULT 'queued',
   detail VARCHAR(200) NULL,
@@ -311,5 +330,5 @@ CREATE TABLE rate_limits (
 -- #
 CREATE TABLE meta (
   k VARCHAR(40) NOT NULL PRIMARY KEY,
-  v VARCHAR(255) NOT NULL
+  v TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

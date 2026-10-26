@@ -12,13 +12,13 @@ $nav = function (string $href, string $label, string $ic = '') use ($cur) {
 <title><?= e(($title ?? brand()) . ($panel ? ' — ' . $ctx['shop']['name'] : ' — ' . brand())) ?></title>
 <meta name="theme-color" content="#202522">
 <?php if ($panel || ($noindex ?? false)): ?><meta name="robots" content="noindex"><?php endif; ?>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23202522'/%3E%3Cpath d='M10 10h20v5H15v5h12v5H15v5h15v5H10z' fill='%23d7b77e'/%3E%3C/svg%3E"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(asset('/assets/style.css')) ?>">
+<link rel="icon" type="image/svg+xml" href="<?= e(brand_favicon()) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= e(url('/assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= e(asset('/assets/style.css')) ?>">
 </head><body>
 <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <div class="rail"></div>
 <header class="top"><div class="container-x">
   <?php if ($panel): ?><button type="button" class="burger" id="burgerBtn" aria-label="Abrir menu" aria-controls="moreSheet" aria-expanded="false"><i class="bi bi-list"></i></button><?php endif; ?>
-  <a class="brand" href="<?= e(url($panel ? '/painel' : '/')) ?>"><i><?= e(brand_initial()) ?></i><?= e(brand()) ?></a>
+  <a class="brand" href="<?= e(url($panel ? '/painel' : '/')) ?>"><?= brand_mark() ?><?= e(brand()) ?></a>
   <span class="grow"></span>
   <?php require BF_ROOT . '/views/_theme_btn.php'; ?>
   <?php if ($panel): ?>

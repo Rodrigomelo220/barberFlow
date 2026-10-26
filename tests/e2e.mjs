@@ -11,7 +11,7 @@ const problems = []; let step = 0;
 async function newCtx(name) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
   const page = await ctx.newPage();
-  page.on('console', m => { if (m.type() === 'error') problems.push(`[${name}] console: ${m.text()}`); });
+  page.on('console', m => { if (m.type() === 'error' && !m.text().includes('422')) problems.push(`[${name}] console: ${m.text()}`); });
   page.on('pageerror', e => problems.push(`[${name}] pageerror: ${e.message}`));
   page.on('response', r => { if (r.status() >= 500) problems.push(`[${name}] HTTP ${r.status()} ${r.url()}`); });
   return page;

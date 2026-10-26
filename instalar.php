@@ -61,7 +61,7 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST' && $reqOk) {
 
             $cfg = ['db' => ['host' => $v['host'], 'port' => (int)$v['port'], 'name' => $v['name'], 'user' => $v['user'], 'pass' => $v['pass']],
                 'app' => ['url' => rtrim($v['app_url'], '/'), 'mode' => $v['mode'] === 'demo' ? 'demo' : 'live', 'send_mail' => false, 'mail_from' => $brandName . ' <nao-responda@localhost>',
-                    'webhook_token' => bin2hex(random_bytes(24)), 'cron_key' => bin2hex(random_bytes(16))]];
+                    'webhook_token' => bin2hex(random_bytes(24)), 'cron_key' => bin2hex(random_bytes(16)), 'secret' => bin2hex(random_bytes(24))]];
             $out = "<?php\n// Gerado pelo instalador. NÃO publique este arquivo.\nreturn " . var_export($cfg, true) . ";\n";
             if (file_put_contents($configFile, $out, LOCK_EX) === false) {
                 $errors[] = 'Banco criado, mas não consegui gravar o config.php. Dê permissão de escrita na pasta do site e recarregue.';
